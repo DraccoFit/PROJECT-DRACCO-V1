@@ -2034,7 +2034,7 @@ async def search_foods(
         
         return {
             "foods": foods,
-            "total_found": len(foods),
+            "total_count": len(foods),
             "query_applied": query
         }
         
