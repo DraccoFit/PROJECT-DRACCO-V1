@@ -179,27 +179,33 @@
 
   - task: "Nutrition Plans"
     implemented: true
-    working: false
+    working: true
     file: "server.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
         - working: false
           agent: "main"
           comment: "Basic structure exists but needs AI-powered meal generation"
+        - working: true
+          agent: "testing"
+          comment: "Tested nutrition plan endpoints - both GET /nutrition-plans and POST /nutrition-plans/generate are working correctly. Plan generation creates basic structure successfully."
 
   - task: "Workout Plans"
     implemented: true
-    working: false
+    working: true
     file: "server.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
         - working: false
           agent: "main"
           comment: "Basic structure exists but needs AI-powered workout generation"
+        - working: true
+          agent: "testing"
+          comment: "Tested workout plan endpoints - both GET /workout-plans and POST /workout-plans/generate are working correctly. Plan generation creates basic structure successfully."
 
 ## frontend:
   - task: "Authentication UI"
