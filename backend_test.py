@@ -592,19 +592,20 @@ class FitnessAppTester:
         print("=" * 50)
         
         # Test 1: AI Chatbot endpoint
-        chat_response = self.make_request("POST", "/chat", {"message": "¿Qué ejercicios me recomiendas para principiantes?"})
+        chat_data = {"message": "¿Qué ejercicios me recomiendas para principiantes?"}
+        chat_response = self.make_request("POST", "/chat", chat_data)
         
         if chat_response and chat_response.status_code == 200:
             try:
-                chat_data = chat_response.json()
-                if "response" in chat_data:
-                    response_text = chat_data["response"]
+                chat_result = chat_response.json()
+                if "response" in chat_result:
+                    response_text = chat_result["response"]
                     if "AI chatbot no disponible" in response_text or "OpenAI" in response_text:
                         self.log_result("AI Chatbot (No API Key)", True, "Correctly handles missing OpenAI API key")
                     else:
                         self.log_result("AI Chatbot (With API Key)", True, "AI chatbot working with API key")
                 else:
-                    self.log_result("AI Chatbot", False, "Missing response field", str(chat_data))
+                    self.log_result("AI Chatbot", False, "Missing response field", str(chat_result))
             except json.JSONDecodeError:
                 self.log_result("AI Chatbot", False, "Invalid JSON response", chat_response.text)
         else:
