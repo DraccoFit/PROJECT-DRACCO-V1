@@ -781,19 +781,19 @@ const MainApp = () => {
       case 'evaluation':
         return <Evaluation />;
       case 'nutrition':
-        return <div>Nutrition component coming soon...</div>;
+        return <Nutrition token={token} />;
       case 'workout':
-        return <div>Workout component coming soon...</div>;
+        return <Workout token={token} />;
       case 'progress':
-        return <div>Progress component coming soon...</div>;
+        return <Progress token={token} />;
       case 'exercises':
-        return <div>Exercises component coming soon...</div>;
+        return <Workout token={token} />;
       case 'water':
-        return <div>Water tracking component coming soon...</div>;
+        return <WaterTracker token={token} />;
       case 'chat':
-        return <div>AI Chat component coming soon...</div>;
+        return <ChatBot token={token} />;
       case 'forum':
-        return <div>Forum component coming soon...</div>;
+        return <Forum token={token} />;
       case 'profile':
         return <div>Profile component coming soon...</div>;
       default:
