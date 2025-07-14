@@ -487,8 +487,12 @@ async def get_progress(current_user: User = Depends(get_current_user)):
 
 # Water Intake
 @api_router.post("/water-intake", response_model=WaterIntake)
-async def add_water_intake(intake: WaterIntake, current_user: User = Depends(get_current_user)):
-    intake.user_id = current_user.id
+async def add_water_intake(intake_request: WaterIntakeRequest, current_user: User = Depends(get_current_user)):
+    intake = WaterIntake(
+        user_id=current_user.id,
+        amount_ml=intake_request.amount_ml,
+        goal_ml=intake_request.goal_ml
+    )
     await db.water_intake.insert_one(intake.dict())
     return intake
 
