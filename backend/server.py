@@ -1146,19 +1146,39 @@ async def generate_workout_plan_ai(user_evaluation: dict, user_id: str) -> dict:
         return {"error": "OpenAI API key not configured"}
     
     try:
+        # Handle both dict and Pydantic model
+        if hasattr(user_evaluation, 'age'):
+            age = user_evaluation.age
+            gender = user_evaluation.gender
+            activity_level = user_evaluation.activity_level
+            goal = user_evaluation.goal
+            experience_level = user_evaluation.experience_level
+            available_days = user_evaluation.available_days
+            equipment_available = user_evaluation.equipment_available
+            health_conditions = user_evaluation.health_conditions
+        else:
+            age = user_evaluation.get('age', 'No especificado')
+            gender = user_evaluation.get('gender', 'No especificado')
+            activity_level = user_evaluation.get('activity_level', 'No especificado')
+            goal = user_evaluation.get('goal', 'No especificado')
+            experience_level = user_evaluation.get('experience_level', 'beginner')
+            available_days = user_evaluation.get('available_days', [])
+            equipment_available = user_evaluation.get('equipment_available', [])
+            health_conditions = user_evaluation.get('health_conditions', [])
+        
         # Create detailed prompt for workout plan generation
         prompt = f"""
         Genera un plan de entrenamiento semanal detallado para un usuario con las siguientes características:
         
         DATOS DEL USUARIO:
-        - Edad: {user_evaluation.get('age', 'No especificado')} años
-        - Género: {user_evaluation.get('gender', 'No especificado')}
-        - Nivel de actividad: {user_evaluation.get('activity_level', 'No especificado')}
-        - Objetivo: {user_evaluation.get('goal', 'No especificado')}
-        - Nivel de experiencia: {user_evaluation.get('experience_level', 'beginner')}
-        - Días disponibles: {user_evaluation.get('available_days', [])}
-        - Equipo disponible: {user_evaluation.get('equipment_available', [])}
-        - Condiciones de salud: {user_evaluation.get('health_conditions', [])}
+        - Edad: {age} años
+        - Género: {gender}
+        - Nivel de actividad: {activity_level}
+        - Objetivo: {goal}
+        - Nivel de experiencia: {experience_level}
+        - Días disponibles: {available_days}
+        - Equipo disponible: {equipment_available}
+        - Condiciones de salud: {health_conditions}
         
         INSTRUCCIONES:
         1. Crea un plan semanal considerando los días disponibles del usuario
