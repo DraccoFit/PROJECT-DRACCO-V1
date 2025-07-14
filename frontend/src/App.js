@@ -786,10 +786,16 @@ const AuthPage = () => {
         ? await login(formData.email, formData.password)
         : await register(formData.email, formData.password, formData.fullName);
 
-      if (!success) {
+      if (success) {
+        // Redirect will be handled by useEffect when user state changes
+        setTimeout(() => {
+          navigate('/dashboard');
+        }, 1000);
+      } else {
         setError('Error en la autenticación. Por favor, verifica tus credenciales.');
       }
     } catch (error) {
+      console.error('Auth error:', error);
       setError('Error en la autenticación. Por favor, inténtalo de nuevo.');
     } finally {
       setLoading(false);
