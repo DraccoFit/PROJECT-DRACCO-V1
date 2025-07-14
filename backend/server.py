@@ -506,8 +506,15 @@ async def get_today_water_intake(current_user: User = Depends(get_current_user))
         "date": {"$gte": today, "$lt": tomorrow}
     }).to_list(100)
     
-    total_intake = sum(entry["amount_ml"] for entry in entries)
-    return {"total_intake": total_intake, "goal": 2000, "entries": entries}
+    # Convert entries to proper format, excluding MongoDB _id field
+    clean_entries = []
+    for entry in entries:
+        if "_id" in entry:
+            del entry["_id"]
+        clean_entries.append(entry)
+    
+    total_intake = sum(entry["amount_ml"] for entry in clean_entries)
+    return {"total_intake": total_intake, "goal": 2000, "entries": clean_entries}
 
 # AI Chatbot
 @api_router.post("/chat")
