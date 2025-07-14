@@ -2291,7 +2291,7 @@ class FitnessAppTester:
         print(f"Testing against: {self.base_url}")
         print("=" * 60)
         
-        # Test sequence - prioritizing FASE 2 features
+        # Test sequence - prioritizing FASE 3 features for current testing
         tests = [
             ("Health Check", self.test_health_check),
             ("User Registration", self.test_user_registration),
@@ -2310,6 +2310,11 @@ class FitnessAppTester:
             ("Smart Shopping List Generator", self.test_smart_shopping_list_generator),
             ("Supplement Recommendations", self.test_supplement_recommendations),
             ("Workout Plans", self.test_workout_plans),
+            # FASE 3: ANÁLISIS Y SEGUIMIENTO - New Advanced Features
+            ("FASE 3: AI Photo Analysis", self.test_fase3_ai_photo_analysis),
+            ("FASE 3: Food Recognition", self.test_fase3_food_recognition),
+            ("FASE 3: Advanced Analytics", self.test_fase3_advanced_analytics),
+            ("FASE 3: Pattern Detection", self.test_fase3_pattern_detection),
         ]
         
         passed = 0
