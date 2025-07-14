@@ -1533,8 +1533,8 @@ async def get_meal_alternatives(
         raise HTTPException(status_code=404, detail="Meal not found")
     
     # Generate alternatives
-    user_preferences = current_user.evaluation.get("food_preferences", []) if current_user.evaluation else []
-    user_allergies = current_user.evaluation.get("food_allergies", []) if current_user.evaluation else []
+    user_preferences = current_user.evaluation.food_preferences if current_user.evaluation else []
+    user_allergies = current_user.evaluation.food_allergies if current_user.evaluation else []
     
     alternatives = await generate_meal_alternatives(target_meal, user_preferences, user_allergies)
     
