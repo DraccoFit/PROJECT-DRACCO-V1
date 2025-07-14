@@ -445,6 +445,124 @@ async def generate_nutrition_plan_ai(user_evaluation: dict, daily_calories: floa
     except Exception as e:
         return {"error": f"Error generating nutrition plan: {str(e)}"}
 
+async def generate_workout_plan_ai(user_evaluation: dict, user_id: str) -> dict:
+    """Generate AI-powered workout plan"""
+    if not OPENAI_API_KEY:
+        return {"error": "OpenAI API key not configured"}
+    
+    try:
+        # Create detailed prompt for workout plan generation
+        prompt = f"""
+        Genera un plan de entrenamiento semanal detallado para un usuario con las siguientes características:
+        
+        DATOS DEL USUARIO:
+        - Edad: {user_evaluation.get('age', 'No especificado')} años
+        - Género: {user_evaluation.get('gender', 'No especificado')}
+        - Nivel de actividad: {user_evaluation.get('activity_level', 'No especificado')}
+        - Objetivo: {user_evaluation.get('goal', 'No especificado')}
+        - Nivel de experiencia: {user_evaluation.get('experience_level', 'beginner')}
+        - Días disponibles: {user_evaluation.get('available_days', [])}
+        - Equipo disponible: {user_evaluation.get('equipment_available', [])}
+        - Condiciones de salud: {user_evaluation.get('health_conditions', [])}
+        
+        INSTRUCCIONES:
+        1. Crea un plan semanal considerando los días disponibles del usuario
+        2. Cada sesión debe incluir:
+           - Nombre descriptivo
+           - Lista de ejercicios con series, repeticiones y peso/intensidad
+           - Duración total aproximada
+           - Áreas de enfoque
+           - Nivel de dificultad adaptado
+        3. Respeta las limitaciones de equipo y salud
+        4. Adapta la intensidad al nivel de experiencia
+        5. Incluye variedad de ejercicios y progresión
+        
+        FORMATO DE RESPUESTA (JSON):
+        {{
+            "plan_name": "Plan de Entrenamiento Personalizado",
+            "user_id": "{user_id}",
+            "duration": "7 días",
+            "workouts": {{
+                "Lunes": {{
+                    "name": "Entrenamiento de Fuerza - Tren Superior",
+                    "exercises": [
+                        {{
+                            "name": "Flexiones de pecho",
+                            "sets": 3,
+                            "reps": "10-12",
+                            "weight": "Peso corporal",
+                            "rest": "60 segundos",
+                            "notes": "Mantén la forma correcta"
+                        }},
+                        {{
+                            "name": "Dominadas asistidas",
+                            "sets": 3,
+                            "reps": "8-10",
+                            "weight": "Peso corporal",
+                            "rest": "90 segundos",
+                            "notes": "Usa banda elástica si es necesario"
+                        }}
+                    ],
+                    "duration": 45,
+                    "focus_areas": ["Pecho", "Espalda", "Brazos"],
+                    "difficulty": "intermediate"
+                }},
+                "Martes": {{
+                    "name": "Cardio y Core",
+                    "exercises": [
+                        {{
+                            "name": "Burpees",
+                            "sets": 4,
+                            "reps": "8-10",
+                            "weight": "Peso corporal",
+                            "rest": "60 segundos",
+                            "notes": "Mantén un ritmo constante"
+                        }}
+                    ],
+                    "duration": 30,
+                    "focus_areas": ["Cardio", "Core"],
+                    "difficulty": "intermediate"
+                }},
+                ... (continúa para todos los días disponibles)
+            }},
+            "recommendations": [
+                "Calienta siempre antes de entrenar",
+                "Mantén una buena hidratación",
+                "Descansa al menos 48 horas entre entrenamientos del mismo grupo muscular"
+            ]
+        }}
+        
+        Responde SOLO con el JSON válido, sin explicaciones adicionales.
+        """
+        
+        response = openai.chat.completions.create(
+            model="gpt-4",
+            messages=[
+                {"role": "system", "content": "Eres un entrenador personal experto que crea planes de entrenamiento personalizados. Responde siempre en formato JSON válido."},
+                {"role": "user", "content": prompt}
+            ],
+            max_tokens=3000,
+            temperature=0.3
+        )
+        
+        # Parse the JSON response
+        ai_response = response.choices[0].message.content
+        
+        # Clean the response (remove any markdown formatting)
+        ai_response = ai_response.strip()
+        if ai_response.startswith('```json'):
+            ai_response = ai_response[7:]
+        if ai_response.endswith('```'):
+            ai_response = ai_response[:-3]
+        
+        workout_plan = json.loads(ai_response)
+        return workout_plan
+        
+    except json.JSONDecodeError as e:
+        return {"error": f"Error parsing AI response: {str(e)}"}
+    except Exception as e:
+        return {"error": f"Error generating workout plan: {str(e)}"}
+
 async def generate_meal_alternatives(original_meal: dict, user_preferences: list, allergies: list) -> list:
     """Generate alternative meals based on user preferences and allergies"""
     if not OPENAI_API_KEY:
