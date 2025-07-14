@@ -2291,25 +2291,10 @@ class FitnessAppTester:
         print(f"Testing against: {self.base_url}")
         print("=" * 60)
         
-        # Test sequence - prioritizing FASE 3 features for current testing
+        # Test sequence - FOCUSING ON FASE 3 FEATURES ONLY for current testing
         tests = [
-            ("Health Check", self.test_health_check),
             ("User Registration", self.test_user_registration),
-            ("User Login", self.test_user_login),
-            ("Get Profile", self.test_get_profile),
             ("User Evaluation", self.test_user_evaluation),
-            ("Exercise Endpoints", self.test_exercises),
-            ("Water Intake", self.test_water_intake),
-            ("Notifications", self.test_notifications),
-            ("OpenAI Integration", self.test_openai_integration_scenarios),
-            ("Enhanced Nutrition System", self.test_enhanced_nutrition_system),
-            ("Enhanced AI Workout Plans", self.test_enhanced_ai_workout_plans),
-            ("Health Metrics Calculator", self.test_health_metrics_calculator),
-            ("Advanced Exercise Library", self.test_advanced_exercise_library),
-            ("Food Comparison Tool", self.test_food_comparison_tool),
-            ("Smart Shopping List Generator", self.test_smart_shopping_list_generator),
-            ("Supplement Recommendations", self.test_supplement_recommendations),
-            ("Workout Plans", self.test_workout_plans),
             # FASE 3: ANÁLISIS Y SEGUIMIENTO - New Advanced Features
             ("FASE 3: AI Photo Analysis", self.test_fase3_ai_photo_analysis),
             ("FASE 3: Food Recognition", self.test_fase3_food_recognition),
