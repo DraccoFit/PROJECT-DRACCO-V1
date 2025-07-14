@@ -280,10 +280,28 @@ class NutritionPlan(BaseModel):
 class ShoppingList(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     user_id: str
-    plan_id: str
-    items: List[Dict[str, Any]]  # [{name, quantity, category, purchased}]
+    plan_id: Optional[str] = None
+    name: str = "Lista de Compras"
+    items: List[Dict[str, Any]]  # Enhanced structure
     created_at: datetime = Field(default_factory=datetime.utcnow)
     completed: bool = False
+    total_estimated_cost: Optional[float] = None
+    store_suggestions: List[str] = []
+    categories: List[str] = []
+
+class ShoppingItem(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    name: str
+    quantity: str
+    unit: str = "unidades"
+    category: str
+    purchased: bool = False
+    price: Optional[float] = None
+    brand_preference: Optional[str] = None
+    alternatives: List[str] = []
+    notes: Optional[str] = None
+    nutritional_priority: Optional[str] = None  # high, medium, low
+    urgency: Optional[str] = None  # urgent, normal, optional
 
 class WorkoutSession(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
