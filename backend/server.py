@@ -614,17 +614,90 @@ async def generate_nutrition_plan(current_user: User = Depends(get_current_user)
     if not current_user.evaluation or not current_user.daily_calories:
         raise HTTPException(status_code=400, detail="Please complete your evaluation first")
     
-    # This would generate a personalized nutrition plan based on user data
-    # For now, we'll create a basic plan structure
+    # Generate AI-powered nutrition plan
+    ai_plan = await generate_nutrition_plan_ai(current_user.evaluation, current_user.daily_calories)
+    
+    if "error" in ai_plan:
+        raise HTTPException(status_code=500, detail=ai_plan["error"])
+    
+    # Convert AI plan to database format
+    meals_by_day = {}
+    for day, day_meals in ai_plan.get("days", {}).items():
+        daily_meals = []
+        for meal_type, meal_data in day_meals.items():
+            meal = Meal(
+                name=meal_data.get("name", ""),
+                foods=[],  # We'll populate this with actual food IDs later
+                total_calories=meal_data.get("calories", 0),
+                total_protein=meal_data.get("protein", 0),
+                total_carbs=meal_data.get("carbs", 0),
+                total_fat=meal_data.get("fat", 0),
+                meal_type=meal_type.lower(),
+                instructions=meal_data.get("instructions", "")
+            )
+            daily_meals.append(meal)
+        meals_by_day[day] = daily_meals
+    
+    # Create nutrition plan
     plan = NutritionPlan(
         user_id=current_user.id,
         week_number=1,
         daily_calories=current_user.daily_calories,
-        meals={}  # This would be populated with actual meal data
+        meals={day: [meal.dict() for meal in meals] for day, meals in meals_by_day.items()}
     )
     
     await db.nutrition_plans.insert_one(plan.dict())
-    return {"message": "Plan nutricional generado exitosamente", "plan_id": plan.id}
+    
+    # Return the AI-generated plan with additional info
+    return {
+        "message": "Plan nutricional generado exitosamente",
+        "plan_id": plan.id,
+        "plan_details": ai_plan,
+        "tips": ai_plan.get("tips", []),
+        "shopping_list": ai_plan.get("shopping_list", [])
+    }
+
+@api_router.get("/nutrition-plans/{plan_id}")
+async def get_nutrition_plan_details(plan_id: str, current_user: User = Depends(get_current_user)):
+    plan = await db.nutrition_plans.find_one({"id": plan_id, "user_id": current_user.id})
+    if not plan:
+        raise HTTPException(status_code=404, detail="Plan not found")
+    
+    return NutritionPlan(**plan)
+
+@api_router.post("/nutrition-plans/{plan_id}/alternatives")
+async def get_meal_alternatives(
+    plan_id: str,
+    day: str,
+    meal_type: str,
+    current_user: User = Depends(get_current_user)
+):
+    # Get the plan
+    plan = await db.nutrition_plans.find_one({"id": plan_id, "user_id": current_user.id})
+    if not plan:
+        raise HTTPException(status_code=404, detail="Plan not found")
+    
+    # Get the specific meal
+    day_meals = plan.get("meals", {}).get(day, [])
+    target_meal = None
+    for meal in day_meals:
+        if meal.get("meal_type") == meal_type.lower():
+            target_meal = meal
+            break
+    
+    if not target_meal:
+        raise HTTPException(status_code=404, detail="Meal not found")
+    
+    # Generate alternatives
+    user_preferences = current_user.evaluation.get("food_preferences", []) if current_user.evaluation else []
+    user_allergies = current_user.evaluation.get("food_allergies", []) if current_user.evaluation else []
+    
+    alternatives = await generate_meal_alternatives(target_meal, user_preferences, user_allergies)
+    
+    return {
+        "original_meal": target_meal,
+        "alternatives": alternatives
+    }
 
 # Workout Plans
 @api_router.get("/workout-plans", response_model=List[WorkoutPlan])
