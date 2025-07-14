@@ -173,6 +173,17 @@ class NutritionPlan(BaseModel):
     daily_calories: float
     meals: Dict[str, List[Meal]]  # {day: [meals]}
     created_at: datetime = Field(default_factory=datetime.utcnow)
+    tips: List[str] = []
+    shopping_list: List[str] = []
+    plan_name: str = "Plan Nutricional Personalizado"
+
+class ShoppingList(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    user_id: str
+    plan_id: str
+    items: List[Dict[str, Any]]  # [{name, quantity, category, purchased}]
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    completed: bool = False
 
 class WorkoutSession(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
