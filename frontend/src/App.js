@@ -213,40 +213,60 @@ const Navbar = () => {
 
 const Sidebar = ({ activeTab, setActiveTab }) => {
   const menuItems = [
-    { id: 'dashboard', label: 'Dashboard', icon: '📊' },
-    { id: 'evaluation', label: 'Evaluación', icon: '📋' },
-    { id: 'nutrition', label: 'Nutrición', icon: '🥗' },
-    { id: 'workout', label: 'Entrenamiento', icon: '🏋️' },
-    { id: 'progress', label: 'Progreso', icon: '📈' },
-    { id: 'exercises', label: 'Ejercicios', icon: '💪' },
-    { id: 'water', label: 'Agua', icon: '💧' },
-    { id: 'chat', label: 'Chat IA', icon: '🤖' },
-    { id: 'forum', label: 'Foro', icon: '💬' },
-    { id: 'profile', label: 'Perfil', icon: '👤' },
+    { id: 'dashboard', label: 'Dashboard', icon: '📊', color: 'from-blue-500 to-cyan-500' },
+    { id: 'evaluation', label: 'Evaluación', icon: '📋', color: 'from-purple-500 to-pink-500' },
+    { id: 'nutrition', label: 'Nutrición', icon: '🥗', color: 'from-green-500 to-emerald-500' },
+    { id: 'workout', label: 'Entrenamiento', icon: '🏋️', color: 'from-orange-500 to-red-500' },
+    { id: 'progress', label: 'Progreso', icon: '📈', color: 'from-teal-500 to-blue-500' },
+    { id: 'exercises', label: 'Ejercicios', icon: '💪', color: 'from-indigo-500 to-purple-500' },
+    { id: 'water', label: 'Agua', icon: '💧', color: 'from-cyan-500 to-blue-500' },
+    { id: 'chat', label: 'Chat IA', icon: '🤖', color: 'from-pink-500 to-rose-500' },
+    { id: 'forum', label: 'Foro', icon: '💬', color: 'from-yellow-500 to-orange-500' },
+    { id: 'profile', label: 'Perfil', icon: '👤', color: 'from-slate-500 to-gray-500' },
   ];
 
   return (
-    <div className="w-64 bg-white dark:bg-gray-800 shadow-lg h-full">
-      <div className="p-4">
-        <h2 className="text-lg font-semibold text-gray-800 dark:text-white mb-4">
+    <div className="w-64 glass backdrop-blur-xl border-r border-white/20 dark:border-gray-800/20 h-screen sticky top-0 overflow-y-auto">
+      <div className="p-6">
+        <h2 className="text-lg font-semibold gradient-text mb-6 text-center">
           Menú Principal
         </h2>
         <nav className="space-y-2">
-          {menuItems.map(item => (
+          {menuItems.map((item, index) => (
             <button
               key={item.id}
               onClick={() => setActiveTab(item.id)}
-              className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors ${
+              className={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl transition-all duration-300 hover-lift group ${
                 activeTab === item.id
-                  ? 'bg-blue-500 text-white'
-                  : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+                  ? 'bg-gradient-to-r ' + item.color + ' text-white shadow-lg'
+                  : 'text-gray-700 dark:text-gray-300 hover:bg-white/10 dark:hover:bg-black/10'
               }`}
+              style={{ animationDelay: `${index * 0.1}s` }}
             >
-              <span className="text-xl">{item.icon}</span>
-              <span>{item.label}</span>
+              <span className={`text-xl transition-transform group-hover:scale-110 ${
+                activeTab === item.id ? 'animate-bounce-slow' : ''
+              }`}>
+                {item.icon}
+              </span>
+              <span className="font-medium">{item.label}</span>
+              {activeTab === item.id && (
+                <div className="ml-auto">
+                  <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
+                </div>
+              )}
             </button>
           ))}
         </nav>
+      </div>
+      
+      {/* Decorative Elements */}
+      <div className="absolute bottom-4 left-4 right-4">
+        <div className="glass rounded-xl p-4 text-center">
+          <div className="text-2xl mb-2">🎯</div>
+          <p className="text-xs text-gray-600 dark:text-gray-400">
+            ¡Mantén tu rutina diaria!
+          </p>
+        </div>
       </div>
     </div>
   );
