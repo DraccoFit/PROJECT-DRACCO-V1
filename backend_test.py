@@ -334,47 +334,186 @@ class FitnessAppTester:
             self.log_result("Notifications", False, f"HTTP {response.status_code}", response.text)
             return False
     
-    def test_nutrition_plans(self):
-        """Test nutrition plan endpoints - NEEDS RETESTING"""
+    def test_enhanced_nutrition_system(self):
+        """Test enhanced nutrition plan system with AI functionality"""
         if not self.auth_token:
-            self.log_result("Nutrition Plans", False, "No auth token available")
+            self.log_result("Enhanced Nutrition System", False, "No auth token available")
             return False
         
-        # Test getting nutrition plans
+        # Step 1: Test getting existing nutrition plans
         response = self.make_request("GET", "/nutrition-plans")
         
         if response is None:
-            self.log_result("Nutrition Plans", False, "Request failed")
+            self.log_result("Enhanced Nutrition System", False, "Failed to get nutrition plans")
             return False
         
-        if response.status_code == 200:
-            try:
-                data = response.json()
-                if isinstance(data, list):
-                    # Test generating a nutrition plan
-                    gen_response = self.make_request("POST", "/nutrition-plans/generate")
-                    
-                    if gen_response and gen_response.status_code == 200:
-                        gen_data = gen_response.json()
-                        if "message" in gen_data and "plan_id" in gen_data:
-                            self.log_result("Nutrition Plans", True, "Nutrition plan generation working")
-                            return True
-                        else:
-                            self.log_result("Nutrition Plans", False, "Plan generation missing data", str(gen_data))
-                            return False
-                    else:
-                        error_msg = gen_response.text if gen_response else "Request failed"
-                        self.log_result("Nutrition Plans", False, f"Plan generation failed: HTTP {gen_response.status_code if gen_response else 'None'}", error_msg)
-                        return False
-                else:
-                    self.log_result("Nutrition Plans", False, "Expected list response", str(data))
-                    return False
-            except json.JSONDecodeError:
-                self.log_result("Nutrition Plans", False, "Invalid JSON response", response.text)
-                return False
-        else:
-            self.log_result("Nutrition Plans", False, f"HTTP {response.status_code}", response.text)
+        if response.status_code != 200:
+            self.log_result("Enhanced Nutrition System", False, f"Get nutrition plans failed: HTTP {response.status_code}", response.text)
             return False
+        
+        try:
+            plans_data = response.json()
+            if not isinstance(plans_data, list):
+                self.log_result("Enhanced Nutrition System", False, "Expected list response for nutrition plans", str(plans_data))
+                return False
+        except json.JSONDecodeError:
+            self.log_result("Enhanced Nutrition System", False, "Invalid JSON response for nutrition plans", response.text)
+            return False
+        
+        # Step 2: Test AI-powered nutrition plan generation
+        gen_response = self.make_request("POST", "/nutrition-plans/generate")
+        
+        if gen_response is None:
+            self.log_result("Enhanced Nutrition System", False, "Failed to generate nutrition plan")
+            return False
+        
+        if gen_response.status_code != 200:
+            self.log_result("Enhanced Nutrition System", False, f"Plan generation failed: HTTP {gen_response.status_code}", gen_response.text)
+            return False
+        
+        try:
+            gen_data = gen_response.json()
+            if not ("message" in gen_data and "plan_id" in gen_data):
+                self.log_result("Enhanced Nutrition System", False, "Plan generation missing required data", str(gen_data))
+                return False
+            
+            plan_id = gen_data["plan_id"]
+            
+        except json.JSONDecodeError:
+            self.log_result("Enhanced Nutrition System", False, "Invalid JSON response for plan generation", gen_response.text)
+            return False
+        
+        # Step 3: Test nutrition plan details retrieval
+        details_response = self.make_request("GET", f"/nutrition-plans/{plan_id}")
+        
+        if details_response is None:
+            self.log_result("Enhanced Nutrition System", False, "Failed to get plan details")
+            return False
+        
+        if details_response.status_code != 200:
+            self.log_result("Enhanced Nutrition System", False, f"Get plan details failed: HTTP {details_response.status_code}", details_response.text)
+            return False
+        
+        try:
+            plan_details = details_response.json()
+            if not ("id" in plan_details and "meals" in plan_details):
+                self.log_result("Enhanced Nutrition System", False, "Plan details missing required fields", str(plan_details))
+                return False
+        except json.JSONDecodeError:
+            self.log_result("Enhanced Nutrition System", False, "Invalid JSON response for plan details", details_response.text)
+            return False
+        
+        # Step 4: Test meal alternatives generation
+        # Try to get alternatives for a meal (using first day and first meal type)
+        meals = plan_details.get("meals", {})
+        if meals:
+            first_day = list(meals.keys())[0]
+            day_meals = meals[first_day]
+            if day_meals and len(day_meals) > 0:
+                first_meal = day_meals[0]
+                meal_type = first_meal.get("meal_type", "desayuno")
+                
+                alt_response = self.make_request("POST", f"/nutrition-plans/{plan_id}/alternatives?day={first_day}&meal_type={meal_type}")
+                
+                if alt_response and alt_response.status_code == 200:
+                    try:
+                        alt_data = alt_response.json()
+                        if "original_meal" in alt_data and "alternatives" in alt_data:
+                            self.log_result("Meal Alternatives", True, "Meal alternatives generated successfully")
+                        else:
+                            self.log_result("Meal Alternatives", False, "Alternatives response missing required fields", str(alt_data))
+                    except json.JSONDecodeError:
+                        self.log_result("Meal Alternatives", False, "Invalid JSON response for alternatives", alt_response.text)
+                else:
+                    error_msg = alt_response.text if alt_response else "Request failed"
+                    status_code = alt_response.status_code if alt_response else "None"
+                    self.log_result("Meal Alternatives", False, f"Alternatives generation failed: HTTP {status_code}", error_msg)
+        
+        # Step 5: Test shopping list generation
+        shopping_response = self.make_request("POST", f"/shopping-lists/generate/{plan_id}")
+        
+        if shopping_response is None:
+            self.log_result("Shopping List Generation", False, "Failed to generate shopping list")
+            return False
+        
+        if shopping_response.status_code != 200:
+            self.log_result("Shopping List Generation", False, f"Shopping list generation failed: HTTP {shopping_response.status_code}", shopping_response.text)
+            return False
+        
+        try:
+            shopping_data = shopping_response.json()
+            if not ("message" in shopping_data and "shopping_list_id" in shopping_data and "items" in shopping_data):
+                self.log_result("Shopping List Generation", False, "Shopping list response missing required fields", str(shopping_data))
+                return False
+            
+            shopping_list_id = shopping_data["shopping_list_id"]
+            
+        except json.JSONDecodeError:
+            self.log_result("Shopping List Generation", False, "Invalid JSON response for shopping list", shopping_response.text)
+            return False
+        
+        # Step 6: Test shopping list management
+        # Get shopping lists
+        lists_response = self.make_request("GET", "/shopping-lists")
+        
+        if lists_response is None:
+            self.log_result("Shopping List Management", False, "Failed to get shopping lists")
+            return False
+        
+        if lists_response.status_code != 200:
+            self.log_result("Shopping List Management", False, f"Get shopping lists failed: HTTP {lists_response.status_code}", lists_response.text)
+            return False
+        
+        try:
+            lists_data = lists_response.json()
+            if not isinstance(lists_data, list):
+                self.log_result("Shopping List Management", False, "Expected list response for shopping lists", str(lists_data))
+                return False
+        except json.JSONDecodeError:
+            self.log_result("Shopping List Management", False, "Invalid JSON response for shopping lists", lists_response.text)
+            return False
+        
+        # Test updating shopping list item
+        update_response = self.make_request("PUT", f"/shopping-lists/{shopping_list_id}/items/0", {"purchased": True})
+        
+        if update_response and update_response.status_code == 200:
+            try:
+                update_data = update_response.json()
+                if "message" in update_data:
+                    self.log_result("Shopping List Item Update", True, "Shopping list item updated successfully")
+                else:
+                    self.log_result("Shopping List Item Update", False, "Update response missing message", str(update_data))
+            except json.JSONDecodeError:
+                self.log_result("Shopping List Item Update", False, "Invalid JSON response for item update", update_response.text)
+        else:
+            error_msg = update_response.text if update_response else "Request failed"
+            status_code = update_response.status_code if update_response else "None"
+            self.log_result("Shopping List Item Update", False, f"Item update failed: HTTP {status_code}", error_msg)
+        
+        # Step 7: Test nutrition analysis
+        analysis_response = self.make_request("GET", f"/nutrition-analysis/{plan_id}")
+        
+        if analysis_response is None:
+            self.log_result("Nutrition Analysis", False, "Failed to get nutrition analysis")
+            return False
+        
+        if analysis_response.status_code != 200:
+            self.log_result("Nutrition Analysis", False, f"Nutrition analysis failed: HTTP {analysis_response.status_code}", analysis_response.text)
+            return False
+        
+        try:
+            analysis_data = analysis_response.json()
+            required_fields = ["plan_id", "weekly_summary", "daily_averages", "macro_distribution"]
+            if all(field in analysis_data for field in required_fields):
+                self.log_result("Nutrition Analysis", True, "Nutrition analysis retrieved successfully")
+            else:
+                missing_fields = [field for field in required_fields if field not in analysis_data]
+                self.log_result("Nutrition Analysis", False, f"Analysis missing required fields: {missing_fields}", str(analysis_data))
+        except json.JSONDecodeError:
+            self.log_result("Nutrition Analysis", False, "Invalid JSON response for nutrition analysis", analysis_response.text)
+        
+        self.log_result("Enhanced Nutrition System", True, "All enhanced nutrition system tests completed successfully")
+        return True
     
     def test_workout_plans(self):
         """Test workout plan endpoints - NEEDS RETESTING"""
