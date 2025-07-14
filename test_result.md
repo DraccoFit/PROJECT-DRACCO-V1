@@ -345,7 +345,6 @@
 
 ## test_plan:
   current_focus:
-    - "Authentication UI"
     - "Enhanced AI Workout Plans"
     - "Health Metrics Calculator"
     - "Advanced Exercise Library"
