@@ -20,6 +20,7 @@ import base64
 from io import BytesIO
 from PIL import Image
 import requests
+import math
 
 # Load environment variables
 ROOT_DIR = Path(__file__).parent
