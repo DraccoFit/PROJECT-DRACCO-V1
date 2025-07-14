@@ -2276,7 +2276,7 @@ async def search_supplements(
         
         return {
             "supplements": supplements,
-            "total_found": len(supplements),
+            "total_count": len(supplements),
             "query_applied": query
         }
         
