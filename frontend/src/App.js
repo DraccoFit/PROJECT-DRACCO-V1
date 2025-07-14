@@ -227,6 +227,11 @@ const Sidebar = ({ activeTab, setActiveTab }) => {
     { id: 'chat', label: 'Chat IA', icon: '🤖', color: 'from-pink-500 to-rose-500' },
     { id: 'forum', label: 'Foro', icon: '💬', color: 'from-yellow-500 to-orange-500' },
     { id: 'profile', label: 'Perfil', icon: '👤', color: 'from-slate-500 to-gray-500' },
+    // FASE 3: Nuevas características
+    { id: 'analytics', label: 'Análisis Avanzado', icon: '📊', color: 'from-emerald-500 to-teal-500' },
+    { id: 'photo-analysis', label: 'Análisis de Fotos', icon: '📸', color: 'from-purple-500 to-indigo-500' },
+    { id: 'food-recognition', label: 'Reconocer Alimentos', icon: '🍽️', color: 'from-green-500 to-lime-500' },
+    { id: 'pattern-alerts', label: 'Alertas y Patrones', icon: '🚨', color: 'from-red-500 to-pink-500' },
   ];
 
   return (
