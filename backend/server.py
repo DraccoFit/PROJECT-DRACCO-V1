@@ -402,12 +402,70 @@ class HealthMetricsRequest(BaseModel):
     weight: float
     height: float
     age: int
-    gender: str
-    activity_level: str
+    gender: Gender
+    activity_level: ActivityLevel
     body_fat_percentage: Optional[float] = None
-    neck_circumference: Optional[float] = None
     waist_circumference: Optional[float] = None
     hip_circumference: Optional[float] = None
+
+# New models for Phase 3 features
+class PhotoAnalysisRequest(BaseModel):
+    image_base64: str
+    analysis_type: str = "body_composition"  # body_composition, progress_comparison, posture
+    previous_photos: List[str] = []  # for comparison
+
+class PhotoAnalysisResult(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    user_id: str
+    analysis_type: str
+    image_base64: str
+    ai_analysis: Dict[str, Any]
+    metrics_detected: Dict[str, Any] = {}
+    recommendations: List[str] = []
+    confidence_score: float = 0.0
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+
+class FoodRecognitionRequest(BaseModel):
+    image_base64: str
+    meal_type: str = "unknown"  # breakfast, lunch, dinner, snack
+
+class FoodRecognitionResult(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    user_id: str
+    image_base64: str
+    recognized_foods: List[Dict[str, Any]]
+    nutritional_info: Dict[str, Any]
+    total_calories: float
+    meal_type: str
+    confidence_score: float
+    suggestions: List[str] = []
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+
+class PatternAlert(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    user_id: str
+    alert_type: str  # abandonment, plateau, goal_deviation, health_concern
+    severity: str  # low, medium, high, critical
+    title: str
+    description: str
+    data_points: List[Dict[str, Any]] = []
+    recommendations: List[str] = []
+    is_active: bool = True
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    resolved_at: Optional[datetime] = None
+
+class AdvancedProgressStats(BaseModel):
+    user_id: str
+    period: str  # week, month, quarter, year
+    weight_trend: Dict[str, Any]
+    body_composition_trend: Dict[str, Any]
+    measurement_trends: Dict[str, Any]
+    activity_patterns: Dict[str, Any]
+    nutrition_patterns: Dict[str, Any]
+    goal_progress: Dict[str, Any]
+    predictions: Dict[str, Any]
+    risk_factors: List[str] = []
+    achievements: List[str] = []
 
 class Token(BaseModel):
     access_token: str
