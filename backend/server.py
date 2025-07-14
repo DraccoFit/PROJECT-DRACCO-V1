@@ -543,6 +543,368 @@ def calculate_daily_calorie_needs(weight: float, height: float, age: int, gender
         "recommended_tdee": round(bmr_mifflin * multiplier, 0)
     }
 
+def build_exercise_query(filters: ExerciseFilter) -> dict:
+    """Build MongoDB query from exercise filters"""
+    query = {}
+    
+    if filters.name:
+        query["name"] = {"$regex": filters.name, "$options": "i"}
+    
+    if filters.type:
+        query["type"] = filters.type
+    
+    if filters.difficulty:
+        query["difficulty"] = filters.difficulty
+    
+    if filters.muscle_groups:
+        query["muscle_groups"] = {"$in": filters.muscle_groups}
+    
+    if filters.equipment:
+        query["equipment"] = {"$in": filters.equipment}
+    
+    if filters.duration_range:
+        duration_query = {}
+        if "min" in filters.duration_range:
+            duration_query["$gte"] = filters.duration_range["min"]
+        if "max" in filters.duration_range:
+            duration_query["$lte"] = filters.duration_range["max"]
+        if duration_query:
+            query["duration_minutes"] = duration_query
+    
+    if filters.calories_range:
+        calories_query = {}
+        if "min" in filters.calories_range:
+            calories_query["$gte"] = filters.calories_range["min"]
+        if "max" in filters.calories_range:
+            calories_query["$lte"] = filters.calories_range["max"]
+        if calories_query:
+            query["calories_burned"] = calories_query
+    
+    if filters.intensity_range:
+        intensity_query = {}
+        if "min" in filters.intensity_range:
+            intensity_query["$gte"] = filters.intensity_range["min"]
+        if "max" in filters.intensity_range:
+            intensity_query["$lte"] = filters.intensity_range["max"]
+        if intensity_query:
+            query["intensity_level"] = intensity_query
+    
+    if filters.tags:
+        query["tags"] = {"$in": filters.tags}
+    
+    if filters.has_video is not None:
+        if filters.has_video:
+            query["video_url"] = {"$ne": None, "$ne": ""}
+        else:
+            query["$or"] = [
+                {"video_url": {"$exists": False}},
+                {"video_url": None},
+                {"video_url": ""}
+            ]
+    
+    return query
+
+def calculate_food_health_score(food: dict) -> float:
+    """Calculate health score for a food item (0-100)"""
+    score = 50  # Base score
+    
+    # Protein bonus
+    protein_per_100_cal = (food.get("protein", 0) * 4) / max(food.get("calories_per_100g", 1), 1) * 100
+    score += min(protein_per_100_cal * 0.3, 20)
+    
+    # Fiber bonus
+    fiber_per_100_cal = food.get("fiber", 0) / max(food.get("calories_per_100g", 1), 1) * 100
+    score += min(fiber_per_100_cal * 0.5, 15)
+    
+    # Sugar penalty
+    sugar_per_100_cal = food.get("sugar", 0) / max(food.get("calories_per_100g", 1), 1) * 100
+    score -= min(sugar_per_100_cal * 0.2, 15)
+    
+    # Sodium penalty
+    sodium_per_100_cal = food.get("sodium", 0) / max(food.get("calories_per_100g", 1), 1) * 100
+    score -= min(sodium_per_100_cal * 0.1, 10)
+    
+    # Saturated fat penalty
+    saturated_fat_per_100_cal = (food.get("saturated_fat", 0) * 9) / max(food.get("calories_per_100g", 1), 1) * 100
+    score -= min(saturated_fat_per_100_cal * 0.1, 10)
+    
+    # Trans fat penalty
+    trans_fat = food.get("trans_fat", 0)
+    if trans_fat > 0:
+        score -= 20
+    
+    # Vitamin and mineral bonus
+    vitamins_minerals = ["vitamin_c", "vitamin_a", "vitamin_d", "calcium", "iron", "potassium"]
+    for nutrient in vitamins_minerals:
+        if food.get(nutrient, 0) > 0:
+            score += 2
+    
+    return max(0, min(100, score))
+
+def generate_supplement_recommendations(user_evaluation: dict, health_metrics: dict) -> List[dict]:
+    """Generate personalized supplement recommendations"""
+    recommendations = []
+    
+    goal = user_evaluation.get("goal", "")
+    age = user_evaluation.get("age", 25)
+    gender = user_evaluation.get("gender", "")
+    activity_level = user_evaluation.get("activity_level", "")
+    
+    # Basic recommendations for everyone
+    basic_supplements = [
+        {
+            "name": "Multivitamínico",
+            "category": "vitamins",
+            "reason": "Cubre deficiencias nutricionales básicas",
+            "priority": 3,
+            "confidence": 0.8
+        },
+        {
+            "name": "Omega-3",
+            "category": "fatty_acids",
+            "reason": "Mejora la salud cardiovascular y reduce la inflamación",
+            "priority": 3,
+            "confidence": 0.7
+        }
+    ]
+    
+    # Goal-specific recommendations
+    if goal == "build_muscle" or goal == "gain_weight":
+        recommendations.extend([
+            {
+                "name": "Proteína Whey",
+                "category": "protein",
+                "reason": "Apoya el crecimiento muscular y recuperación",
+                "priority": 5,
+                "confidence": 0.9
+            },
+            {
+                "name": "Creatina",
+                "category": "performance",
+                "reason": "Mejora la fuerza y potencia muscular",
+                "priority": 4,
+                "confidence": 0.8
+            }
+        ])
+    
+    elif goal == "lose_weight":
+        recommendations.extend([
+            {
+                "name": "L-Carnitina",
+                "category": "fat_burner",
+                "reason": "Ayuda en la oxidación de grasas",
+                "priority": 3,
+                "confidence": 0.6
+            },
+            {
+                "name": "Fibra",
+                "category": "digestive",
+                "reason": "Aumenta la saciedad y mejora la digestión",
+                "priority": 3,
+                "confidence": 0.7
+            }
+        ])
+    
+    # Activity level recommendations
+    if activity_level in ["very_active", "extremely_active"]:
+        recommendations.extend([
+            {
+                "name": "BCAA",
+                "category": "amino_acids",
+                "reason": "Reduce la fatiga muscular durante entrenamientos intensos",
+                "priority": 3,
+                "confidence": 0.7
+            },
+            {
+                "name": "Magnesio",
+                "category": "minerals",
+                "reason": "Mejora la recuperación muscular y calidad del sueño",
+                "priority": 3,
+                "confidence": 0.8
+            }
+        ])
+    
+    # Age-specific recommendations
+    if age > 40:
+        recommendations.extend([
+            {
+                "name": "Vitamina D3",
+                "category": "vitamins",
+                "reason": "Mantiene la salud ósea y función inmune",
+                "priority": 4,
+                "confidence": 0.8
+            },
+            {
+                "name": "Colágeno",
+                "category": "joints",
+                "reason": "Apoya la salud articular y de la piel",
+                "priority": 3,
+                "confidence": 0.7
+            }
+        ])
+    
+    # Gender-specific recommendations
+    if gender == "female":
+        recommendations.extend([
+            {
+                "name": "Hierro",
+                "category": "minerals",
+                "reason": "Previene la anemia ferropénica",
+                "priority": 4,
+                "confidence": 0.7
+            },
+            {
+                "name": "Ácido Fólico",
+                "category": "vitamins",
+                "reason": "Importante para la salud reproductiva",
+                "priority": 3,
+                "confidence": 0.8
+            }
+        ])
+    
+    # Add basic supplements
+    recommendations.extend(basic_supplements)
+    
+    # Remove duplicates and sort by priority
+    unique_recommendations = {}
+    for rec in recommendations:
+        if rec["name"] not in unique_recommendations:
+            unique_recommendations[rec["name"]] = rec
+    
+    return sorted(unique_recommendations.values(), key=lambda x: x["priority"], reverse=True)
+
+def generate_smart_shopping_list(nutrition_plan: dict, user_preferences: dict) -> dict:
+    """Generate intelligent shopping list from nutrition plan"""
+    shopping_items = []
+    categories = set()
+    
+    # Extract ingredients from nutrition plan
+    ingredients_count = {}
+    
+    for day, meals in nutrition_plan.get("meals", {}).items():
+        for meal in meals:
+            if isinstance(meal, dict) and "ingredients" in meal:
+                for ingredient in meal["ingredients"]:
+                    if ingredient in ingredients_count:
+                        ingredients_count[ingredient] += 1
+                    else:
+                        ingredients_count[ingredient] = 1
+    
+    # Convert to shopping items with smart categorization
+    for ingredient, count in ingredients_count.items():
+        category = categorize_ingredient(ingredient)
+        categories.add(category)
+        
+        # Determine quantity based on frequency
+        if count <= 2:
+            quantity = "1-2"
+        elif count <= 5:
+            quantity = "3-5"
+        else:
+            quantity = "6+"
+        
+        shopping_item = {
+            "name": ingredient,
+            "quantity": quantity,
+            "unit": "unidades",
+            "category": category,
+            "purchased": False,
+            "nutritional_priority": determine_nutritional_priority(ingredient),
+            "urgency": "normal"
+        }
+        
+        shopping_items.append(shopping_item)
+    
+    # Add staples if not present
+    staples = [
+        {"name": "Aceite de oliva", "category": "Aceites y condimentos", "quantity": "1", "urgency": "normal"},
+        {"name": "Sal", "category": "Aceites y condimentos", "quantity": "1", "urgency": "normal"},
+        {"name": "Pimienta", "category": "Aceites y condimentos", "quantity": "1", "urgency": "normal"},
+    ]
+    
+    existing_items = [item["name"].lower() for item in shopping_items]
+    for staple in staples:
+        if staple["name"].lower() not in existing_items:
+            shopping_items.append(staple)
+            categories.add(staple["category"])
+    
+    # Sort by category and priority
+    shopping_items.sort(key=lambda x: (x["category"], x.get("nutritional_priority", "medium")))
+    
+    return {
+        "items": shopping_items,
+        "categories": list(categories),
+        "total_items": len(shopping_items),
+        "estimated_cost": estimate_shopping_cost(shopping_items)
+    }
+
+def categorize_ingredient(ingredient: str) -> str:
+    """Categorize ingredient for shopping list"""
+    ingredient_lower = ingredient.lower()
+    
+    if any(word in ingredient_lower for word in ["pollo", "carne", "pescado", "atún", "salmón", "pavo"]):
+        return "Carnes y pescados"
+    elif any(word in ingredient_lower for word in ["leche", "yogur", "queso", "huevo"]):
+        return "Lácteos y huevos"
+    elif any(word in ingredient_lower for word in ["manzana", "plátano", "naranja", "fresa", "uva"]):
+        return "Frutas"
+    elif any(word in ingredient_lower for word in ["lechuga", "tomate", "cebolla", "zanahoria", "brócoli"]):
+        return "Verduras"
+    elif any(word in ingredient_lower for word in ["arroz", "pasta", "pan", "avena", "quinoa"]):
+        return "Cereales y granos"
+    elif any(word in ingredient_lower for word in ["aceite", "sal", "pimienta", "ajo", "especias"]):
+        return "Aceites y condimentos"
+    elif any(word in ingredient_lower for word in ["nuez", "almendra", "cacahuete", "semilla"]):
+        return "Frutos secos y semillas"
+    else:
+        return "Otros"
+
+def determine_nutritional_priority(ingredient: str) -> str:
+    """Determine nutritional priority of ingredient"""
+    ingredient_lower = ingredient.lower()
+    
+    high_priority = ["proteína", "pollo", "pescado", "huevo", "quinoa", "avena", "brócoli", "espinaca"]
+    medium_priority = ["arroz", "pasta", "leche", "yogur", "manzana", "plátano"]
+    
+    if any(word in ingredient_lower for word in high_priority):
+        return "high"
+    elif any(word in ingredient_lower for word in medium_priority):
+        return "medium"
+    else:
+        return "low"
+
+def estimate_shopping_cost(items: List[dict]) -> float:
+    """Estimate total cost of shopping list"""
+    # This is a simplified estimation - in production, you'd use real price data
+    cost_per_category = {
+        "Carnes y pescados": 8.0,
+        "Lácteos y huevos": 3.5,
+        "Frutas": 2.5,
+        "Verduras": 2.0,
+        "Cereales y granos": 1.5,
+        "Aceites y condimentos": 4.0,
+        "Frutos secos y semillas": 6.0,
+        "Otros": 3.0
+    }
+    
+    total_cost = 0
+    for item in items:
+        category = item.get("category", "Otros")
+        base_cost = cost_per_category.get(category, 3.0)
+        
+        # Adjust based on quantity
+        quantity = item.get("quantity", "1")
+        if "3-5" in quantity:
+            multiplier = 4
+        elif "6+" in quantity:
+            multiplier = 7
+        else:
+            multiplier = 1.5
+        
+        total_cost += base_cost * multiplier
+    
+    return round(total_cost, 2)
+
 def generate_health_recommendations(bmi: float, body_fat: float, age: int, gender: str, goal: str) -> list:
     """Generate personalized health recommendations"""
     recommendations = []
