@@ -352,8 +352,7 @@
     - "Food Comparison Tool"
     - "Smart Shopping List Generator"
     - "Supplement Recommendations"
-  stuck_tasks: 
-    - "Authentication UI"
+  stuck_tasks: []
   test_all: false
   test_priority: "high_first"
 
