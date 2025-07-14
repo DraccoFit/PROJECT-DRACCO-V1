@@ -9,6 +9,10 @@ import WaterTracker from './components/WaterTracker';
 import ChatBot from './components/ChatBot';
 import Forum from './components/Forum';
 import Profile from './components/Profile';
+import PhotoAnalysis from './components/PhotoAnalysis';
+import FoodRecognition from './components/FoodRecognition';
+import AdvancedAnalytics from './components/AdvancedAnalytics';
+import PatternAlerts from './components/PatternAlerts';
 
 // API Configuration
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
