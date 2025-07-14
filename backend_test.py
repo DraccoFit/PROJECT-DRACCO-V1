@@ -1753,6 +1753,7 @@ class FitnessAppTester:
         
         self.log_result("Supplement Recommendations", True, "Supplement recommendations system tested successfully")
         return True
+    def test_openai_integration_scenarios(self):
         """Test OpenAI integration scenarios - with and without API key"""
         if not self.auth_token:
             self.log_result("OpenAI Integration", False, "No auth token available")
@@ -1800,14 +1801,43 @@ class FitnessAppTester:
                     self.log_result("AI Nutrition Generation", False, "Invalid error response", gen_response.text)
         
         return True
-    
+
+    def test_workout_plans(self):
+        """Test workout plans functionality"""
+        if not self.auth_token:
+            self.log_result("Workout Plans", False, "No auth token available")
+            return False
+        
+        # Test getting workout plans
+        response = self.make_request("GET", "/workout-plans")
+        
+        if response is None:
+            self.log_result("Workout Plans", False, "Request failed")
+            return False
+        
+        if response.status_code == 200:
+            try:
+                data = response.json()
+                if isinstance(data, list):
+                    self.log_result("Workout Plans", True, f"Retrieved {len(data)} workout plans")
+                    return True
+                else:
+                    self.log_result("Workout Plans", False, "Expected list response", str(data))
+                    return False
+            except json.JSONDecodeError:
+                self.log_result("Workout Plans", False, "Invalid JSON response", response.text)
+                return False
+        else:
+            self.log_result("Workout Plans", False, f"HTTP {response.status_code}", response.text)
+            return False
+
     def run_all_tests(self):
         """Run all backend tests"""
         print("🚀 Starting Fitness App Backend API Tests")
         print(f"Testing against: {self.base_url}")
         print("=" * 60)
         
-        # Test sequence
+        # Test sequence - prioritizing FASE 2 features
         tests = [
             ("Health Check", self.test_health_check),
             ("User Registration", self.test_user_registration),
@@ -1819,6 +1849,12 @@ class FitnessAppTester:
             ("Notifications", self.test_notifications),
             ("OpenAI Integration", self.test_openai_integration_scenarios),
             ("Enhanced Nutrition System", self.test_enhanced_nutrition_system),
+            ("Enhanced AI Workout Plans", self.test_enhanced_ai_workout_plans),
+            ("Health Metrics Calculator", self.test_health_metrics_calculator),
+            ("Advanced Exercise Library", self.test_advanced_exercise_library),
+            ("Food Comparison Tool", self.test_food_comparison_tool),
+            ("Smart Shopping List Generator", self.test_smart_shopping_list_generator),
+            ("Supplement Recommendations", self.test_supplement_recommendations),
             ("Workout Plans", self.test_workout_plans),
         ]
         
