@@ -540,47 +540,127 @@ class FitnessAppTester:
         self.log_result("Enhanced Nutrition System", True, "Enhanced nutrition system tests completed (with OpenAI limitations noted)")
         return True
     
-    def test_workout_plans(self):
-        """Test workout plan endpoints - NEEDS RETESTING"""
+    def test_enhanced_ai_workout_plans(self):
+        """Test Enhanced AI Workout Plans - FASE 1 PRIORITY TESTING"""
         if not self.auth_token:
-            self.log_result("Workout Plans", False, "No auth token available")
+            self.log_result("Enhanced AI Workout Plans", False, "No auth token available")
             return False
         
-        # Test getting workout plans
+        print("\n🏋️ Testing Enhanced AI Workout Plans (FASE 1)")
+        print("=" * 50)
+        
+        # Step 1: Test getting existing workout plans
         response = self.make_request("GET", "/workout-plans")
         
         if response is None:
-            self.log_result("Workout Plans", False, "Request failed")
+            self.log_result("Enhanced AI Workout Plans", False, "Failed to get workout plans")
             return False
         
-        if response.status_code == 200:
+        if response.status_code != 200:
+            self.log_result("Enhanced AI Workout Plans", False, f"Get workout plans failed: HTTP {response.status_code}", response.text)
+            return False
+        
+        try:
+            plans_data = response.json()
+            if not isinstance(plans_data, list):
+                self.log_result("Enhanced AI Workout Plans", False, "Expected list response for workout plans", str(plans_data))
+                return False
+            self.log_result("Get Workout Plans", True, f"Retrieved {len(plans_data)} existing workout plans")
+        except json.JSONDecodeError:
+            self.log_result("Enhanced AI Workout Plans", False, "Invalid JSON response for workout plans", response.text)
+            return False
+        
+        # Step 2: Test AI-powered workout plan generation
+        gen_response = self.make_request("POST", "/workout-plans/generate")
+        
+        if gen_response is None:
+            self.log_result("Enhanced AI Workout Plans", False, "Failed to generate workout plan")
+            return False
+        
+        # Handle both success and OpenAI API key scenarios
+        if gen_response.status_code == 200:
             try:
-                data = response.json()
-                if isinstance(data, list):
-                    # Test generating a workout plan
-                    gen_response = self.make_request("POST", "/workout-plans/generate")
-                    
-                    if gen_response and gen_response.status_code == 200:
-                        gen_data = gen_response.json()
-                        if "message" in gen_data and "plan_id" in gen_data:
-                            self.log_result("Workout Plans", True, "Workout plan generation working")
-                            return True
+                gen_data = gen_response.json()
+                
+                # Validate required fields in response
+                required_fields = ["message", "plan_id", "plan_details"]
+                missing_fields = [field for field in required_fields if field not in gen_data]
+                if missing_fields:
+                    self.log_result("Enhanced AI Workout Plans", False, f"Plan generation missing required fields: {missing_fields}", str(gen_data))
+                    return False
+                
+                plan_id = gen_data["plan_id"]
+                plan_details = gen_data["plan_details"]
+                
+                # Validate AI plan structure
+                if "workouts" in plan_details:
+                    workouts = plan_details["workouts"]
+                    if isinstance(workouts, dict) and len(workouts) > 0:
+                        # Check first workout structure
+                        first_workout = list(workouts.values())[0]
+                        if isinstance(first_workout, dict):
+                            workout_fields = ["name", "exercises", "duration", "focus_areas"]
+                            if all(field in first_workout for field in workout_fields):
+                                # Check exercise structure
+                                exercises = first_workout.get("exercises", [])
+                                if exercises and isinstance(exercises, list):
+                                    first_exercise = exercises[0]
+                                    exercise_fields = ["name", "sets", "reps"]
+                                    if all(field in first_exercise for field in exercise_fields):
+                                        self.log_result("AI Workout Plan Generation", True, f"Enhanced AI workout plan generated successfully with {len(exercises)} exercises")
+                                        self.log_result("Workout Plan Structure", True, "Plan contains detailed exercises with sets, reps, and recommendations")
+                                    else:
+                                        self.log_result("Enhanced AI Workout Plans", False, f"Exercise missing required fields: {exercise_fields}", str(first_exercise))
+                                        return False
+                                else:
+                                    self.log_result("Enhanced AI Workout Plans", False, "Workout missing exercises", str(first_workout))
+                                    return False
+                            else:
+                                self.log_result("Enhanced AI Workout Plans", False, f"Workout missing required fields: {workout_fields}", str(first_workout))
+                                return False
                         else:
-                            self.log_result("Workout Plans", False, "Plan generation missing data", str(gen_data))
+                            self.log_result("Enhanced AI Workout Plans", False, "Invalid workout structure", str(first_workout))
                             return False
                     else:
-                        error_msg = gen_response.text if gen_response else "Request failed"
-                        self.log_result("Workout Plans", False, f"Plan generation failed: HTTP {gen_response.status_code if gen_response else 'None'}", error_msg)
+                        self.log_result("Enhanced AI Workout Plans", False, "No workouts in plan", str(workouts))
                         return False
                 else:
-                    self.log_result("Workout Plans", False, "Expected list response", str(data))
+                    self.log_result("Enhanced AI Workout Plans", False, "Plan details missing workouts", str(plan_details))
+                    return False
+                
+                # Test additional fields
+                if "total_workouts" in gen_data and "weekly_schedule" in gen_data:
+                    self.log_result("Workout Plan Metadata", True, f"Plan includes {gen_data['total_workouts']} workouts for {len(gen_data['weekly_schedule'])} days")
+                
+                # Test recommendations if present
+                if "recommendations" in plan_details:
+                    recommendations = plan_details["recommendations"]
+                    if isinstance(recommendations, list) and len(recommendations) > 0:
+                        self.log_result("Workout Recommendations", True, f"Plan includes {len(recommendations)} personalized recommendations")
+                
+            except json.JSONDecodeError:
+                self.log_result("Enhanced AI Workout Plans", False, "Invalid JSON response for plan generation", gen_response.text)
+                return False
+        
+        elif gen_response.status_code == 500:
+            try:
+                error_data = gen_response.json()
+                if "OpenAI API key not configured" in error_data.get("detail", ""):
+                    self.log_result("AI Workout Plan Generation", True, "Correctly handles missing OpenAI API key")
+                    self.log_result("Enhanced AI Workout Plans", False, "Cannot test full AI functionality without OpenAI API key", "System requires OpenAI integration for enhanced workout plans")
+                    return False
+                else:
+                    self.log_result("Enhanced AI Workout Plans", False, f"Unexpected error: {error_data.get('detail', 'Unknown error')}")
                     return False
             except json.JSONDecodeError:
-                self.log_result("Workout Plans", False, "Invalid JSON response", response.text)
+                self.log_result("Enhanced AI Workout Plans", False, "Invalid JSON error response", gen_response.text)
                 return False
         else:
-            self.log_result("Workout Plans", False, f"HTTP {response.status_code}", response.text)
+            self.log_result("Enhanced AI Workout Plans", False, f"Plan generation failed: HTTP {gen_response.status_code}", gen_response.text)
             return False
+        
+        self.log_result("Enhanced AI Workout Plans", True, "Enhanced AI workout plan system tested successfully")
+        return True
     
     def test_openai_integration_scenarios(self):
         """Test OpenAI integration scenarios - with and without API key"""
