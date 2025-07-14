@@ -222,6 +222,54 @@
           agent: "main"
           comment: "Added comprehensive health metrics including BMI calculator, body fat percentage, ideal weight calculations, calorie needs, and health recommendations. Added endpoints for health metrics calculation, history, and analysis."
 
+  - task: "Advanced Exercise Library"
+    implemented: true
+    working: false
+    file: "server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+        - working: false
+          agent: "main"
+          comment: "Enhanced exercise library with advanced filtering, search, reviews, video support, detailed instructions, variations, safety tips, and statistics. Added endpoints for exercise search, details, reviews, and category stats."
+
+  - task: "Food Comparison Tool"
+    implemented: true
+    working: false
+    file: "server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+        - working: false
+          agent: "main"
+          comment: "Added comprehensive food comparison system with nutritional analysis, health scoring, detailed nutrition labels, and search functionality. Includes advanced nutritional data and dietary flags."
+
+  - task: "Smart Shopping List Generator"
+    implemented: true
+    working: false
+    file: "server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+        - working: false
+          agent: "main"
+          comment: "Enhanced shopping list generation with intelligent categorization, cost estimation, optimization suggestions, and automatic generation from nutrition plans. Added smart item alternatives and store suggestions."
+
+  - task: "Supplement Recommendations"
+    implemented: true
+    working: false
+    file: "server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+        - working: false
+          agent: "main"
+          comment: "Added personalized supplement recommendation system based on user goals, age, gender, activity level, and health metrics. Includes supplement search, details, and recommendation logic."
+
 ## frontend:
   - task: "Authentication UI"
     implemented: true
