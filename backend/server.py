@@ -1351,6 +1351,184 @@ async def get_today_water_intake(current_user: User = Depends(get_current_user))
     total_intake = sum(entry["amount_ml"] for entry in clean_entries)
     return {"total_intake": total_intake, "goal": 2000, "entries": clean_entries}
 
+# Health Metrics
+@api_router.post("/health-metrics/calculate")
+async def calculate_health_metrics(
+    metrics_request: HealthMetricsRequest,
+    current_user: User = Depends(get_current_user)
+):
+    """Calculate comprehensive health metrics"""
+    try:
+        # Calculate BMI
+        bmi = calculate_bmi(metrics_request.weight, metrics_request.height)
+        bmi_category = get_bmi_category(bmi)
+        
+        # Calculate body fat percentage
+        body_fat_bmi = calculate_body_fat_percentage(
+            metrics_request.gender, 
+            metrics_request.age, 
+            bmi
+        )
+        
+        # Calculate body fat using Navy method if measurements are provided
+        body_fat_navy = None
+        if (metrics_request.neck_circumference and 
+            metrics_request.waist_circumference):
+            body_fat_navy = calculate_body_fat_navy(
+                metrics_request.gender,
+                metrics_request.height,
+                metrics_request.neck_circumference,
+                metrics_request.waist_circumference,
+                metrics_request.hip_circumference
+            )
+        
+        # Use provided body fat percentage or calculated one
+        body_fat = (metrics_request.body_fat_percentage or 
+                   body_fat_navy or 
+                   body_fat_bmi)
+        
+        # Calculate ideal weight
+        ideal_weight = calculate_ideal_weight(
+            metrics_request.height, 
+            metrics_request.gender
+        )
+        
+        # Calculate daily calorie needs
+        calorie_needs = calculate_daily_calorie_needs(
+            metrics_request.weight,
+            metrics_request.height,
+            metrics_request.age,
+            metrics_request.gender,
+            metrics_request.activity_level
+        )
+        
+        # Generate health recommendations
+        recommendations = generate_health_recommendations(
+            bmi, 
+            body_fat, 
+            metrics_request.age, 
+            metrics_request.gender, 
+            "maintain_weight"  # Default goal
+        )
+        
+        # Create health metrics record
+        health_metrics = HealthMetrics(
+            user_id=current_user.id,
+            bmi=round(bmi, 1),
+            body_fat_percentage=round(body_fat, 1),
+            bmi_category=bmi_category,
+            health_status="Normal" if 18.5 <= bmi <= 24.9 else "Fuera del rango normal",
+            recommendations=recommendations
+        )
+        
+        # Save to database
+        await db.health_metrics.insert_one(health_metrics.dict())
+        
+        return {
+            "message": "Métricas de salud calculadas exitosamente",
+            "metrics": {
+                "bmi": round(bmi, 1),
+                "bmi_category": bmi_category,
+                "body_fat_percentage": round(body_fat, 1),
+                "body_fat_navy": round(body_fat_navy, 1) if body_fat_navy else None,
+                "ideal_weight": ideal_weight,
+                "calorie_needs": calorie_needs,
+                "health_status": health_metrics.health_status,
+                "recommendations": recommendations
+            }
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error calculating health metrics: {str(e)}")
+
+@api_router.get("/health-metrics/history")
+async def get_health_metrics_history(current_user: User = Depends(get_current_user)):
+    """Get user's health metrics history"""
+    try:
+        metrics = await db.health_metrics.find(
+            {"user_id": current_user.id}
+        ).sort("calculated_at", -1).to_list(50)
+        
+        return {
+            "metrics": metrics,
+            "total_records": len(metrics)
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error retrieving health metrics: {str(e)}")
+
+@api_router.post("/body-measurements")
+async def add_body_measurements(
+    measurements: BodyMeasurements,
+    current_user: User = Depends(get_current_user)
+):
+    """Add body measurements"""
+    measurements.user_id = current_user.id
+    await db.body_measurements.insert_one(measurements.dict())
+    return {"message": "Medidas corporales guardadas exitosamente"}
+
+@api_router.get("/body-measurements")
+async def get_body_measurements(current_user: User = Depends(get_current_user)):
+    """Get user's body measurements history"""
+    measurements = await db.body_measurements.find(
+        {"user_id": current_user.id}
+    ).sort("date", -1).to_list(100)
+    
+    return {
+        "measurements": measurements,
+        "total_records": len(measurements)
+    }
+
+@api_router.get("/health-analysis")
+async def get_health_analysis(current_user: User = Depends(get_current_user)):
+    """Get comprehensive health analysis"""
+    try:
+        # Get latest health metrics
+        latest_metrics = await db.health_metrics.find_one(
+            {"user_id": current_user.id},
+            sort=[("calculated_at", -1)]
+        )
+        
+        # Get recent body measurements
+        recent_measurements = await db.body_measurements.find(
+            {"user_id": current_user.id}
+        ).sort("date", -1).to_list(10)
+        
+        # Get progress entries for weight tracking
+        progress_entries = await db.progress.find(
+            {"user_id": current_user.id}
+        ).sort("date", -1).to_list(30)
+        
+        # Calculate trends if we have data
+        weight_trend = None
+        if len(progress_entries) >= 2:
+            recent_weights = [entry.get("weight") for entry in progress_entries[:10] if entry.get("weight")]
+            if len(recent_weights) >= 2:
+                weight_change = recent_weights[0] - recent_weights[-1]
+                weight_trend = {
+                    "change": round(weight_change, 1),
+                    "direction": "increase" if weight_change > 0 else "decrease" if weight_change < 0 else "stable",
+                    "period_days": (progress_entries[0]["date"] - progress_entries[len(recent_weights)-1]["date"]).days
+                }
+        
+        return {
+            "latest_metrics": latest_metrics,
+            "recent_measurements": recent_measurements[:5],  # Last 5 measurements
+            "progress_summary": {
+                "weight_trend": weight_trend,
+                "total_progress_entries": len(progress_entries)
+            },
+            "health_score": {
+                "bmi_score": 100 if latest_metrics and 18.5 <= latest_metrics.get("bmi", 0) <= 24.9 else 70,
+                "activity_score": 85,  # This could be calculated based on workout completion
+                "nutrition_score": 80,  # This could be calculated based on meal plan adherence
+                "overall_score": 85
+            }
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error retrieving health analysis: {str(e)}")
+
 # AI Chatbot
 @api_router.post("/chat")
 async def chat_with_ai(message: str, current_user: User = Depends(get_current_user)):
