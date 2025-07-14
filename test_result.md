@@ -273,15 +273,18 @@
 ## frontend:
   - task: "Authentication UI"
     implemented: true
-    working: true
+    working: false
     file: "App.js"
-    stuck_count: 0
+    stuck_count: 1
     priority: "high"
     needs_retesting: false
     status_history:
         - working: true
           agent: "main"
           comment: "Login/register forms with error handling"
+        - working: false
+          agent: "testing"
+          comment: "CRITICAL UX ISSUE: Registration backend works perfectly (200 status, JWT stored, user created) but frontend doesn't redirect after successful auth. Users stay on auth page in 'Procesando...' state thinking registration failed. Same issue affects login. Users must manually navigate to main app. Root cause: AuthPage component lacks redirect logic after successful authentication."
 
   - task: "Dashboard"
     implemented: true
