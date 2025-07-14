@@ -2226,10 +2226,10 @@ async def get_supplement_recommendations(current_user: User = Depends(get_curren
             "recommendations": recommendations,
             "total_recommendations": len(recommendations),
             "personalization_factors": {
-                "goal": current_user.evaluation.get("goal"),
-                "activity_level": current_user.evaluation.get("activity_level"),
-                "age": current_user.evaluation.get("age"),
-                "gender": current_user.evaluation.get("gender")
+                "goal": current_user.evaluation.goal if current_user.evaluation else None,
+                "activity_level": current_user.evaluation.activity_level if current_user.evaluation else None,
+                "age": current_user.evaluation.age if current_user.evaluation else None,
+                "gender": current_user.evaluation.gender if current_user.evaluation else None
             }
         }
         
