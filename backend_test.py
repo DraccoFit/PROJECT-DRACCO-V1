@@ -11,7 +11,7 @@ from datetime import datetime
 import uuid
 
 # Configuration
-BASE_URL = "https://13fa3267-6db0-4389-a5aa-78b44f103bf7.preview.emergentagent.com/api"
+BASE_URL = "https://1f5d2290-ec44-4d1c-b2d8-319910e28422.preview.emergentagent.com/api"
 HEADERS = {"Content-Type": "application/json"}
 
 class FitnessAppTester:
