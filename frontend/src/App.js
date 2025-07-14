@@ -772,7 +772,7 @@ const AuthPage = () => {
 
 const MainApp = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
-  const { user } = useAuth();
+  const { user, token } = useAuth();
 
   const renderContent = () => {
     switch (activeTab) {
