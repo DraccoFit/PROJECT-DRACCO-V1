@@ -48,7 +48,7 @@ if OPENAI_API_KEY:
     openai.api_key = OPENAI_API_KEY
 
 # FastAPI app
-app = FastAPI(title="Fitness App API", version="1.0.0")
+app = FastAPI(title="DRACCO API", version="1.0.0")
 api_router = APIRouter(prefix="/api")
 
 # CORS middleware
