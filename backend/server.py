@@ -677,21 +677,10 @@ async def initialize_default_data():
     
     return {"message": "Default data initialized successfully"}
 
-# Include router in main app
-app.include_router(api_router)
-
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
-logger = logging.getLogger(__name__)
-
-@app.on_event("shutdown")
-async def shutdown_db_client():
-    client.close()
-
 # Health check
 @api_router.get("/health")
 async def health_check():
     return {"status": "healthy", "timestamp": datetime.utcnow()}
+
+# Include router in main app
+app.include_router(api_router)
