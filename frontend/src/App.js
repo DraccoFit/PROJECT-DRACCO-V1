@@ -168,7 +168,7 @@ const Navbar = () => {
                 🐉
               </div>
               <span className="ml-3 text-2xl font-bold gradient-text">
-                FitnessPro
+                DRACCO
               </span>
             </div>
           </div>
