@@ -836,10 +836,10 @@ const AuthPage = () => {
               💪
             </div>
             <h2 className="mt-6 text-center text-4xl font-bold gradient-text">
-              {isLogin ? 'Bienvenido' : 'Únete a FitnessPro'}
+              {isLogin ? 'Bienvenido a DRACCO' : 'Únete a DRACCO'}
             </h2>
             <p className="mt-4 text-center text-lg text-gray-600 dark:text-gray-300">
-              {isLogin ? 'Continúa tu viaje fitness' : 'Comienza tu transformación'}
+              {isLogin ? 'Continúa tu análisis fitness avanzado' : 'Comienza tu transformación con IA'}
             </p>
             <p className="mt-2 text-center text-sm text-gray-500 dark:text-gray-400">
               {isLogin ? '¿No tienes cuenta?' : '¿Ya tienes cuenta?'}
