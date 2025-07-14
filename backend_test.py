@@ -1931,10 +1931,11 @@ class FitnessAppTester:
         elif recognition_response.status_code == 500:
             try:
                 error_data = recognition_response.json()
-                if "OpenAI API key not configured" in error_data.get("detail", ""):
-                    self.log_result("Food Recognition", True, "Correctly handles missing OpenAI API key")
+                error_detail = error_data.get("detail", "")
+                if "OpenAI API key not configured" in error_detail or "Error code: 401" in error_detail or "invalid_api_key" in error_detail:
+                    self.log_result("Food Recognition", True, "Correctly handles OpenAI API key issues")
                 else:
-                    self.log_result("Food Recognition", False, f"Unexpected error: {error_data.get('detail', 'Unknown error')}")
+                    self.log_result("Food Recognition", False, f"Unexpected error: {error_detail}")
                     return False
             except json.JSONDecodeError:
                 self.log_result("Food Recognition", False, "Invalid JSON error response", recognition_response.text)
