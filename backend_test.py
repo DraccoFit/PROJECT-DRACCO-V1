@@ -298,7 +298,9 @@ class FitnessAppTester:
                     self.log_result("Water Intake", False, "Invalid JSON response", today_response.text)
                     return False
             else:
-                self.log_result("Water Intake", False, "Failed to get today's intake")
+                error_msg = today_response.text if today_response else "Request failed"
+                status_code = today_response.status_code if today_response else "None"
+                self.log_result("Water Intake", False, f"Failed to get today's intake: HTTP {status_code}", error_msg)
                 return False
         else:
             self.log_result("Water Intake", False, f"HTTP {response.status_code}", response.text)
