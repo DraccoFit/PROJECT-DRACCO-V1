@@ -207,6 +207,10 @@ class WaterIntake(BaseModel):
     amount_ml: float
     goal_ml: float = 2000
 
+class WaterIntakeRequest(BaseModel):
+    amount_ml: float
+    goal_ml: float = 2000
+
 class ChatMessage(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     user_id: str
