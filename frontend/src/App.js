@@ -985,6 +985,15 @@ const MainApp = () => {
         return <Forum token={token} />;
       case 'profile':
         return <Profile token={token} user={user} />;
+      // FASE 3: Nuevos componentes
+      case 'analytics':
+        return <AdvancedAnalytics token={token} />;
+      case 'photo-analysis':
+        return <PhotoAnalysis token={token} />;
+      case 'food-recognition':
+        return <FoodRecognition token={token} />;
+      case 'pattern-alerts':
+        return <PatternAlerts token={token} />;
       default:
         return <Dashboard />;
     }
