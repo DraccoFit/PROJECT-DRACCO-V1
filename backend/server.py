@@ -1830,6 +1830,508 @@ async def get_today_water_intake(current_user: User = Depends(get_current_user))
     total_intake = sum(entry["amount_ml"] for entry in clean_entries)
     return {"total_intake": total_intake, "goal": 2000, "entries": clean_entries}
 
+# Advanced Exercise Library
+@api_router.post("/exercises/search")
+async def search_exercises(filters: ExerciseFilter):
+    """Advanced exercise search with filtering"""
+    try:
+        # Build query
+        query = build_exercise_query(filters)
+        
+        # Build sort criteria
+        sort_criteria = []
+        if filters.sort_by == "rating":
+            sort_criteria.append(("rating", -1 if filters.sort_order == "desc" else 1))
+        elif filters.sort_by == "calories":
+            sort_criteria.append(("calories_burned", -1 if filters.sort_order == "desc" else 1))
+        elif filters.sort_by == "difficulty":
+            sort_criteria.append(("difficulty", -1 if filters.sort_order == "desc" else 1))
+        else:
+            sort_criteria.append(("name", 1))
+        
+        # Execute query
+        cursor = db.exercises.find(query)
+        if sort_criteria:
+            cursor = cursor.sort(sort_criteria)
+        
+        cursor = cursor.skip(filters.offset or 0).limit(filters.limit or 50)
+        exercises = await cursor.to_list(length=filters.limit or 50)
+        
+        # Get total count
+        total_count = await db.exercises.count_documents(query)
+        
+        return {
+            "exercises": exercises,
+            "total_count": total_count,
+            "filters_applied": filters.dict(),
+            "pagination": {
+                "offset": filters.offset or 0,
+                "limit": filters.limit or 50,
+                "has_more": total_count > (filters.offset or 0) + len(exercises)
+            }
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error searching exercises: {str(e)}")
+
+@api_router.get("/exercises/{exercise_id}")
+async def get_exercise_details(exercise_id: str):
+    """Get detailed information about a specific exercise"""
+    exercise = await db.exercises.find_one({"id": exercise_id})
+    if not exercise:
+        raise HTTPException(status_code=404, detail="Exercise not found")
+    
+    # Get reviews for this exercise
+    reviews = await db.exercise_reviews.find({"exercise_id": exercise_id}).to_list(100)
+    
+    # Calculate average rating
+    if reviews:
+        avg_rating = sum(review["rating"] for review in reviews) / len(reviews)
+        exercise["rating"] = round(avg_rating, 1)
+        exercise["review_count"] = len(reviews)
+    
+    return {
+        "exercise": exercise,
+        "reviews": reviews[:10],  # Return first 10 reviews
+        "total_reviews": len(reviews)
+    }
+
+@api_router.post("/exercises/{exercise_id}/review")
+async def add_exercise_review(
+    exercise_id: str,
+    rating: int,
+    comment: Optional[str] = None,
+    current_user: User = Depends(get_current_user)
+):
+    """Add a review for an exercise"""
+    if rating < 1 or rating > 5:
+        raise HTTPException(status_code=400, detail="Rating must be between 1 and 5")
+    
+    # Check if exercise exists
+    exercise = await db.exercises.find_one({"id": exercise_id})
+    if not exercise:
+        raise HTTPException(status_code=404, detail="Exercise not found")
+    
+    # Check if user already reviewed this exercise
+    existing_review = await db.exercise_reviews.find_one({
+        "exercise_id": exercise_id,
+        "user_id": current_user.id
+    })
+    
+    if existing_review:
+        # Update existing review
+        await db.exercise_reviews.update_one(
+            {"exercise_id": exercise_id, "user_id": current_user.id},
+            {"$set": {"rating": rating, "comment": comment}}
+        )
+    else:
+        # Create new review
+        review = ExerciseReview(
+            exercise_id=exercise_id,
+            user_id=current_user.id,
+            rating=rating,
+            comment=comment
+        )
+        await db.exercise_reviews.insert_one(review.dict())
+    
+    return {"message": "Review added successfully"}
+
+@api_router.get("/exercises/categories/stats")
+async def get_exercise_categories_stats():
+    """Get statistics about exercise categories"""
+    try:
+        pipeline = [
+            {
+                "$group": {
+                    "_id": "$type",
+                    "count": {"$sum": 1},
+                    "avg_duration": {"$avg": "$duration_minutes"},
+                    "avg_calories": {"$avg": "$calories_burned"},
+                    "avg_rating": {"$avg": "$rating"}
+                }
+            }
+        ]
+        
+        stats = await db.exercises.aggregate(pipeline).to_list(100)
+        
+        return {
+            "category_stats": stats,
+            "total_exercises": sum(stat["count"] for stat in stats)
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error getting exercise stats: {str(e)}")
+
+# Food Comparison Tool
+@api_router.post("/foods/compare")
+async def compare_foods(comparison: FoodComparison):
+    """Compare nutritional values of multiple foods"""
+    try:
+        # Get food data
+        foods = await db.foods.find({"id": {"$in": comparison.foods}}).to_list(100)
+        
+        if len(foods) < 2:
+            raise HTTPException(status_code=400, detail="Need at least 2 foods to compare")
+        
+        # Calculate nutritional values per serving
+        comparison_data = []
+        for food in foods:
+            serving_multiplier = comparison.serving_size / food.get("serving_size", 100)
+            
+            nutritional_data = {
+                "id": food["id"],
+                "name": food["name"],
+                "serving_size": comparison.serving_size,
+                "calories": round(food["calories_per_100g"] * serving_multiplier, 1),
+                "protein": round(food["protein"] * serving_multiplier, 1),
+                "carbs": round(food["carbs"] * serving_multiplier, 1),
+                "fat": round(food["fat"] * serving_multiplier, 1),
+                "fiber": round(food["fiber"] * serving_multiplier, 1),
+                "sugar": round(food["sugar"] * serving_multiplier, 1),
+                "sodium": round(food["sodium"] * serving_multiplier, 1),
+                "saturated_fat": round(food.get("saturated_fat", 0) * serving_multiplier, 1),
+                "calcium": round(food.get("calcium", 0) * serving_multiplier, 1),
+                "iron": round(food.get("iron", 0) * serving_multiplier, 1),
+                "vitamin_c": round(food.get("vitamin_c", 0) * serving_multiplier, 1),
+                "health_score": calculate_food_health_score(food)
+            }
+            
+            comparison_data.append(nutritional_data)
+        
+        # Generate comparison insights
+        insights = generate_food_comparison_insights(comparison_data)
+        
+        return {
+            "comparison_data": comparison_data,
+            "insights": insights,
+            "serving_size": comparison.serving_size,
+            "comparison_type": comparison.comparison_type
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error comparing foods: {str(e)}")
+
+@api_router.get("/foods/search")
+async def search_foods(
+    q: Optional[str] = None,
+    category: Optional[str] = None,
+    min_protein: Optional[float] = None,
+    max_calories: Optional[float] = None,
+    dietary_flags: Optional[str] = None,
+    limit: int = 50
+):
+    """Search foods with various filters"""
+    try:
+        query = {}
+        
+        if q:
+            query["name"] = {"$regex": q, "$options": "i"}
+        
+        if category:
+            query["category"] = category
+        
+        if min_protein is not None:
+            query["protein"] = {"$gte": min_protein}
+        
+        if max_calories is not None:
+            query["calories_per_100g"] = {"$lte": max_calories}
+        
+        if dietary_flags:
+            flags = dietary_flags.split(",")
+            query["dietary_flags"] = {"$in": flags}
+        
+        foods = await db.foods.find(query).limit(limit).to_list(limit)
+        
+        # Calculate health scores
+        for food in foods:
+            food["health_score"] = calculate_food_health_score(food)
+        
+        return {
+            "foods": foods,
+            "total_found": len(foods),
+            "query_applied": query
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error searching foods: {str(e)}")
+
+@api_router.post("/foods/{food_id}/nutrition-label")
+async def get_nutrition_label(food_id: str, serving_size: float = 100):
+    """Generate detailed nutrition label for a food"""
+    try:
+        food = await db.foods.find_one({"id": food_id})
+        if not food:
+            raise HTTPException(status_code=404, detail="Food not found")
+        
+        serving_multiplier = serving_size / food.get("serving_size", 100)
+        
+        nutritional_data = {
+            "serving_size": serving_size,
+            "calories": round(food["calories_per_100g"] * serving_multiplier, 1),
+            "macronutrients": {
+                "protein": round(food["protein"] * serving_multiplier, 1),
+                "carbs": round(food["carbs"] * serving_multiplier, 1),
+                "fat": round(food["fat"] * serving_multiplier, 1),
+                "fiber": round(food["fiber"] * serving_multiplier, 1),
+                "sugar": round(food["sugar"] * serving_multiplier, 1)
+            },
+            "micronutrients": {
+                "sodium": round(food["sodium"] * serving_multiplier, 1),
+                "calcium": round(food.get("calcium", 0) * serving_multiplier, 1),
+                "iron": round(food.get("iron", 0) * serving_multiplier, 1),
+                "vitamin_c": round(food.get("vitamin_c", 0) * serving_multiplier, 1),
+                "vitamin_a": round(food.get("vitamin_a", 0) * serving_multiplier, 1),
+                "potassium": round(food.get("potassium", 0) * serving_multiplier, 1)
+            },
+            "fats": {
+                "saturated_fat": round(food.get("saturated_fat", 0) * serving_multiplier, 1),
+                "trans_fat": round(food.get("trans_fat", 0) * serving_multiplier, 1),
+                "cholesterol": round(food.get("cholesterol", 0) * serving_multiplier, 1)
+            }
+        }
+        
+        health_score = calculate_food_health_score(food)
+        
+        # Generate recommendations
+        recommendations = []
+        if health_score >= 80:
+            recommendations.append("Excelente elección nutricional")
+        elif health_score >= 60:
+            recommendations.append("Buena opción nutricional")
+        else:
+            recommendations.append("Consumir con moderación")
+        
+        if food["protein"] >= 15:
+            recommendations.append("Alta en proteína")
+        if food["fiber"] >= 5:
+            recommendations.append("Buena fuente de fibra")
+        if food["sugar"] >= 15:
+            recommendations.append("Alto contenido de azúcar")
+        if food["sodium"] >= 400:
+            recommendations.append("Alto contenido de sodio")
+        
+        return {
+            "food_name": food["name"],
+            "nutritional_data": nutritional_data,
+            "health_score": health_score,
+            "recommendations": recommendations,
+            "dietary_flags": food.get("dietary_flags", []),
+            "allergens": food.get("allergens", [])
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error generating nutrition label: {str(e)}")
+
+# Smart Shopping List Generator
+@api_router.post("/shopping-lists/generate-smart/{plan_id}")
+async def generate_smart_shopping_list_from_plan(
+    plan_id: str,
+    current_user: User = Depends(get_current_user)
+):
+    """Generate intelligent shopping list from nutrition plan"""
+    try:
+        # Get the nutrition plan
+        plan = await db.nutrition_plans.find_one({"id": plan_id, "user_id": current_user.id})
+        if not plan:
+            raise HTTPException(status_code=404, detail="Nutrition plan not found")
+        
+        # Get user preferences
+        user_preferences = current_user.evaluation.dict() if current_user.evaluation else {}
+        
+        # Generate smart shopping list
+        shopping_data = generate_smart_shopping_list(plan, user_preferences)
+        
+        # Create shopping list
+        shopping_list = ShoppingList(
+            user_id=current_user.id,
+            plan_id=plan_id,
+            name=f"Lista para {plan.get('plan_name', 'Plan Nutricional')}",
+            items=shopping_data["items"],
+            total_estimated_cost=shopping_data["estimated_cost"],
+            categories=shopping_data["categories"]
+        )
+        
+        await db.shopping_lists.insert_one(shopping_list.dict())
+        
+        return {
+            "message": "Lista de compras inteligente generada exitosamente",
+            "shopping_list_id": shopping_list.id,
+            "items": shopping_data["items"],
+            "categories": shopping_data["categories"],
+            "total_items": shopping_data["total_items"],
+            "estimated_cost": shopping_data["estimated_cost"]
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error generating smart shopping list: {str(e)}")
+
+@api_router.get("/shopping-lists/{list_id}/optimize")
+async def optimize_shopping_list(
+    list_id: str,
+    current_user: User = Depends(get_current_user)
+):
+    """Optimize shopping list by grouping items and suggesting alternatives"""
+    try:
+        shopping_list = await db.shopping_lists.find_one({"id": list_id, "user_id": current_user.id})
+        if not shopping_list:
+            raise HTTPException(status_code=404, detail="Shopping list not found")
+        
+        items = shopping_list.get("items", [])
+        
+        # Group items by category
+        grouped_items = {}
+        for item in items:
+            category = item.get("category", "Otros")
+            if category not in grouped_items:
+                grouped_items[category] = []
+            grouped_items[category].append(item)
+        
+        # Generate store suggestions
+        store_suggestions = [
+            "Supermercado central para productos básicos",
+            "Mercado local para frutas y verduras frescas",
+            "Carnicería especializada para carnes"
+        ]
+        
+        # Suggest item alternatives
+        alternatives = {}
+        for item in items:
+            if item["name"].lower() in ["pollo", "carne de res"]:
+                alternatives[item["name"]] = ["pescado", "tofu", "lentejas"]
+            elif item["name"].lower() in ["leche"]:
+                alternatives[item["name"]] = ["leche de almendras", "leche de avena"]
+        
+        return {
+            "grouped_items": grouped_items,
+            "store_suggestions": store_suggestions,
+            "alternatives": alternatives,
+            "optimization_tips": [
+                "Compra frutas y verduras de temporada",
+                "Considera productos congelados para mayor durabilidad",
+                "Aprovecha ofertas en productos no perecederos"
+            ]
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error optimizing shopping list: {str(e)}")
+
+# Supplement Recommendations
+@api_router.get("/supplements/recommendations")
+async def get_supplement_recommendations(current_user: User = Depends(get_current_user)):
+    """Get personalized supplement recommendations"""
+    try:
+        if not current_user.evaluation:
+            raise HTTPException(status_code=400, detail="Please complete your evaluation first")
+        
+        # Get latest health metrics
+        health_metrics = await db.health_metrics.find_one(
+            {"user_id": current_user.id},
+            sort=[("calculated_at", -1)]
+        )
+        
+        # Generate recommendations
+        recommendations = generate_supplement_recommendations(
+            current_user.evaluation,
+            health_metrics.dict() if health_metrics else {}
+        )
+        
+        # Save recommendations to database
+        for rec in recommendations:
+            supplement_rec = SupplementRecommendation(
+                user_id=current_user.id,
+                supplement_id=rec["name"],  # In a real app, this would be a proper ID
+                reason=rec["reason"],
+                priority=rec["priority"],
+                confidence=rec["confidence"]
+            )
+            await db.supplement_recommendations.insert_one(supplement_rec.dict())
+        
+        return {
+            "recommendations": recommendations,
+            "total_recommendations": len(recommendations),
+            "personalization_factors": {
+                "goal": current_user.evaluation.get("goal"),
+                "activity_level": current_user.evaluation.get("activity_level"),
+                "age": current_user.evaluation.get("age"),
+                "gender": current_user.evaluation.get("gender")
+            }
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error generating supplement recommendations: {str(e)}")
+
+@api_router.get("/supplements/search")
+async def search_supplements(
+    q: Optional[str] = None,
+    category: Optional[str] = None,
+    goal: Optional[str] = None,
+    price_range: Optional[str] = None,
+    limit: int = 50
+):
+    """Search supplements with filters"""
+    try:
+        query = {}
+        
+        if q:
+            query["name"] = {"$regex": q, "$options": "i"}
+        
+        if category:
+            query["category"] = category
+        
+        if goal:
+            query["suitable_for"] = {"$in": [goal]}
+        
+        if price_range:
+            price_min, price_max = map(float, price_range.split("-"))
+            query["price_range.min"] = {"$gte": price_min}
+            query["price_range.max"] = {"$lte": price_max}
+        
+        supplements = await db.supplements.find(query).limit(limit).to_list(limit)
+        
+        return {
+            "supplements": supplements,
+            "total_found": len(supplements),
+            "query_applied": query
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error searching supplements: {str(e)}")
+
+@api_router.get("/supplements/{supplement_id}")
+async def get_supplement_details(supplement_id: str):
+    """Get detailed information about a specific supplement"""
+    supplement = await db.supplements.find_one({"id": supplement_id})
+    if not supplement:
+        raise HTTPException(status_code=404, detail="Supplement not found")
+    
+    # Get user reviews/ratings if available
+    reviews = await db.supplement_reviews.find({"supplement_id": supplement_id}).to_list(100)
+    
+    return {
+        "supplement": supplement,
+        "reviews": reviews[:10],
+        "total_reviews": len(reviews)
+    }
+
+def generate_food_comparison_insights(comparison_data: List[dict]) -> List[str]:
+    """Generate insights from food comparison data"""
+    insights = []
+    
+    # Find best in each category
+    best_protein = max(comparison_data, key=lambda x: x["protein"])
+    best_fiber = max(comparison_data, key=lambda x: x["fiber"])
+    lowest_calories = min(comparison_data, key=lambda x: x["calories"])
+    lowest_sugar = min(comparison_data, key=lambda x: x["sugar"])
+    highest_health_score = max(comparison_data, key=lambda x: x["health_score"])
+    
+    insights.append(f"Mayor proteína: {best_protein['name']} ({best_protein['protein']}g)")
+    insights.append(f"Mayor fibra: {best_fiber['name']} ({best_fiber['fiber']}g)")
+    insights.append(f"Menor calorías: {lowest_calories['name']} ({lowest_calories['calories']} cal)")
+    insights.append(f"Menor azúcar: {lowest_sugar['name']} ({lowest_sugar['sugar']}g)")
+    insights.append(f"Mejor puntuación de salud: {highest_health_score['name']} ({highest_health_score['health_score']}/100)")
+    
+    return insights
+
 # Health Metrics
 @api_router.post("/health-metrics/calculate")
 async def calculate_health_metrics(
