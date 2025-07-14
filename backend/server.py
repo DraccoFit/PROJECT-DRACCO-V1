@@ -710,6 +710,179 @@ async def get_meal_alternatives(
         "alternatives": alternatives
     }
 
+# Shopping Lists
+@api_router.post("/shopping-lists/generate/{plan_id}")
+async def generate_shopping_list(plan_id: str, current_user: User = Depends(get_current_user)):
+    # Get the nutrition plan
+    plan = await db.nutrition_plans.find_one({"id": plan_id, "user_id": current_user.id})
+    if not plan:
+        raise HTTPException(status_code=404, detail="Plan not found")
+    
+    # Extract ingredients from all meals
+    all_ingredients = []
+    for day, meals in plan.get("meals", {}).items():
+        for meal in meals:
+            if isinstance(meal, dict) and "name" in meal:
+                # This is a simplified approach - in a real app, you'd parse ingredients more carefully
+                meal_name = meal.get("name", "")
+                all_ingredients.append(f"Ingredientes para {meal_name}")
+    
+    # Get shopping list from the plan if available
+    shopping_items = plan.get("shopping_list", [])
+    if not shopping_items:
+        shopping_items = all_ingredients
+    
+    # Create shopping list items with categories
+    categorized_items = []
+    for item in shopping_items:
+        categorized_items.append({
+            "name": item,
+            "quantity": "1",
+            "category": "General",
+            "purchased": False
+        })
+    
+    # Create shopping list
+    shopping_list = ShoppingList(
+        user_id=current_user.id,
+        plan_id=plan_id,
+        items=categorized_items
+    )
+    
+    await db.shopping_lists.insert_one(shopping_list.dict())
+    
+    return {
+        "message": "Lista de compras generada exitosamente",
+        "shopping_list_id": shopping_list.id,
+        "items": categorized_items
+    }
+
+@api_router.get("/shopping-lists")
+async def get_shopping_lists(current_user: User = Depends(get_current_user)):
+    lists = await db.shopping_lists.find({"user_id": current_user.id}).to_list(100)
+    return [ShoppingList(**shopping_list) for shopping_list in lists]
+
+@api_router.put("/shopping-lists/{list_id}/items/{item_index}")
+async def update_shopping_item(
+    list_id: str,
+    item_index: int,
+    purchased: bool,
+    current_user: User = Depends(get_current_user)
+):
+    # Get the shopping list
+    shopping_list = await db.shopping_lists.find_one({"id": list_id, "user_id": current_user.id})
+    if not shopping_list:
+        raise HTTPException(status_code=404, detail="Shopping list not found")
+    
+    # Update the item
+    items = shopping_list.get("items", [])
+    if 0 <= item_index < len(items):
+        items[item_index]["purchased"] = purchased
+        
+        # Update the shopping list
+        await db.shopping_lists.update_one(
+            {"id": list_id, "user_id": current_user.id},
+            {"$set": {"items": items}}
+        )
+        
+        return {"message": "Item actualizado exitosamente"}
+    else:
+        raise HTTPException(status_code=404, detail="Item not found")
+
+# Nutritional Analysis
+@api_router.get("/nutrition-analysis/{plan_id}")
+async def get_nutrition_analysis(plan_id: str, current_user: User = Depends(get_current_user)):
+    plan = await db.nutrition_plans.find_one({"id": plan_id, "user_id": current_user.id})
+    if not plan:
+        raise HTTPException(status_code=404, detail="Plan not found")
+    
+    # Calculate weekly nutritional summary
+    weekly_calories = 0
+    weekly_protein = 0
+    weekly_carbs = 0
+    weekly_fat = 0
+    
+    daily_averages = {}
+    meal_distribution = {"desayuno": 0, "almuerzo": 0, "merienda": 0, "cena": 0}
+    
+    for day, meals in plan.get("meals", {}).items():
+        daily_calories = 0
+        daily_protein = 0
+        daily_carbs = 0
+        daily_fat = 0
+        
+        for meal in meals:
+            if isinstance(meal, dict):
+                calories = meal.get("total_calories", 0)
+                protein = meal.get("total_protein", 0)
+                carbs = meal.get("total_carbs", 0)
+                fat = meal.get("total_fat", 0)
+                
+                daily_calories += calories
+                daily_protein += protein
+                daily_carbs += carbs
+                daily_fat += fat
+                
+                meal_type = meal.get("meal_type", "").lower()
+                if meal_type in meal_distribution:
+                    meal_distribution[meal_type] += calories
+        
+        daily_averages[day] = {
+            "calories": daily_calories,
+            "protein": daily_protein,
+            "carbs": daily_carbs,
+            "fat": daily_fat
+        }
+        
+        weekly_calories += daily_calories
+        weekly_protein += daily_protein
+        weekly_carbs += daily_carbs
+        weekly_fat += daily_fat
+    
+    # Calculate averages
+    num_days = len(daily_averages)
+    if num_days > 0:
+        avg_calories = weekly_calories / num_days
+        avg_protein = weekly_protein / num_days
+        avg_carbs = weekly_carbs / num_days
+        avg_fat = weekly_fat / num_days
+    else:
+        avg_calories = avg_protein = avg_carbs = avg_fat = 0
+    
+    # Calculate macro percentages
+    total_cals_from_macros = (avg_protein * 4) + (avg_carbs * 4) + (avg_fat * 9)
+    if total_cals_from_macros > 0:
+        protein_percentage = (avg_protein * 4 / total_cals_from_macros) * 100
+        carbs_percentage = (avg_carbs * 4 / total_cals_from_macros) * 100
+        fat_percentage = (avg_fat * 9 / total_cals_from_macros) * 100
+    else:
+        protein_percentage = carbs_percentage = fat_percentage = 0
+    
+    return {
+        "plan_id": plan_id,
+        "weekly_summary": {
+            "total_calories": weekly_calories,
+            "total_protein": weekly_protein,
+            "total_carbs": weekly_carbs,
+            "total_fat": weekly_fat
+        },
+        "daily_averages": {
+            "calories": round(avg_calories, 2),
+            "protein": round(avg_protein, 2),
+            "carbs": round(avg_carbs, 2),
+            "fat": round(avg_fat, 2)
+        },
+        "macro_distribution": {
+            "protein": round(protein_percentage, 1),
+            "carbs": round(carbs_percentage, 1),
+            "fat": round(fat_percentage, 1)
+        },
+        "meal_distribution": meal_distribution,
+        "daily_breakdown": daily_averages,
+        "target_calories": plan.get("daily_calories", 0),
+        "calorie_variance": round(avg_calories - plan.get("daily_calories", 0), 2)
+    }
+
 # Workout Plans
 @api_router.get("/workout-plans", response_model=List[WorkoutPlan])
 async def get_workout_plans(current_user: User = Depends(get_current_user)):
