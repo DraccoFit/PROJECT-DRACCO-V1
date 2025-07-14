@@ -303,129 +303,210 @@ const Dashboard = () => {
     fetchDashboardData();
   }, [token]);
 
+  const statCards = [
+    {
+      title: 'Agua Diaria',
+      value: `${stats.waterIntake}ml`,
+      icon: '💧',
+      gradient: 'from-blue-500 to-cyan-500',
+      progress: Math.min((stats.waterIntake / stats.waterGoal) * 100, 100)
+    },
+    {
+      title: 'Calorías Objetivo',
+      value: stats.caloriesGoal,
+      icon: '🎯',
+      gradient: 'from-green-500 to-emerald-500',
+      progress: 75
+    },
+    {
+      title: 'Entrenamientos',
+      value: stats.weeklyWorkouts,
+      icon: '🏋️',
+      gradient: 'from-purple-500 to-pink-500',
+      progress: 60
+    },
+    {
+      title: 'Racha Actual',
+      value: '7 días',
+      icon: '🔥',
+      gradient: 'from-orange-500 to-red-500',
+      progress: 90
+    }
+  ];
+
+  const weeklyProgress = [
+    { day: 'Lunes', completed: true },
+    { day: 'Martes', completed: true },
+    { day: 'Miércoles', completed: false },
+    { day: 'Jueves', completed: false },
+    { day: 'Viernes', completed: false },
+    { day: 'Sábado', completed: false },
+    { day: 'Domingo', completed: false }
+  ];
+
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-          Dashboard
-        </h1>
-        <div className="text-sm text-gray-500 dark:text-gray-400">
-          {new Date().toLocaleDateString()}
+    <div className="space-y-8 animate-fade-in">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0">
+        <div>
+          <h1 className="text-4xl font-bold gradient-text animate-slide-up">
+            Dashboard
+          </h1>
+          <p className="text-gray-600 dark:text-gray-400 mt-2 animate-slide-up" style={{ animationDelay: '0.1s' }}>
+            Bienvenido de vuelta, {user?.full_name?.split(' ')[0]}! 🚀
+          </p>
+        </div>
+        <div className="flex items-center space-x-4">
+          <div className="glass px-4 py-2 rounded-xl">
+            <div className="text-sm text-gray-500 dark:text-gray-400">
+              {new Date().toLocaleDateString('es-ES', { 
+                weekday: 'long', 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric' 
+              })}
+            </div>
+          </div>
         </div>
       </div>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-500 dark:text-gray-400">Agua Diaria</p>
-              <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">
-                {stats.waterIntake}ml
-              </p>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        {statCards.map((stat, index) => (
+          <div 
+            key={stat.title} 
+            className="glass rounded-2xl p-6 hover-lift animate-card-enter"
+            style={{ animationDelay: `${index * 0.1}s` }}
+          >
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <p className="text-sm text-gray-500 dark:text-gray-400 font-medium">
+                  {stat.title}
+                </p>
+                <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                  {stat.value}
+                </p>
+              </div>
+              <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${stat.gradient} flex items-center justify-center text-white text-2xl shadow-lg animate-float`}>
+                {stat.icon}
+              </div>
             </div>
-            <div className="text-3xl">💧</div>
-          </div>
-          <div className="mt-4 bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-            <div 
-              className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-              style={{ width: `${Math.min((stats.waterIntake / stats.waterGoal) * 100, 100)}%` }}
-            ></div>
-          </div>
-        </div>
-
-        <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-500 dark:text-gray-400">Calorías Objetivo</p>
-              <p className="text-2xl font-bold text-green-600 dark:text-green-400">
-                {stats.caloriesGoal}
-              </p>
+            
+            {/* Progress Bar */}
+            <div className="mt-4">
+              <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400 mb-1">
+                <span>Progreso</span>
+                <span>{stat.progress}%</span>
+              </div>
+              <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                <div 
+                  className={`progress-bar bg-gradient-to-r ${stat.gradient} h-2 rounded-full transition-all duration-1000`}
+                  style={{ width: `${stat.progress}%` }}
+                ></div>
+              </div>
             </div>
-            <div className="text-3xl">🎯</div>
           </div>
-        </div>
-
-        <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-500 dark:text-gray-400">Entrenamientos Semanales</p>
-              <p className="text-2xl font-bold text-purple-600 dark:text-purple-400">
-                {stats.weeklyWorkouts}
-              </p>
-            </div>
-            <div className="text-3xl">🏋️</div>
-          </div>
-        </div>
-
-        <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-500 dark:text-gray-400">Racha Actual</p>
-              <p className="text-2xl font-bold text-orange-600 dark:text-orange-400">
-                7 días
-              </p>
-            </div>
-            <div className="text-3xl">🔥</div>
-          </div>
-        </div>
+        ))}
       </div>
 
-      {/* Recent Activity */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-            Notificaciones Recientes
-          </h3>
-          <div className="space-y-3">
-            {notifications.length > 0 ? (
-              notifications.map(notification => (
-                <div key={notification.id} className="flex items-start space-x-3">
-                  <div className="w-2 h-2 bg-blue-500 rounded-full mt-2"></div>
-                  <div>
-                    <p className="text-sm font-medium text-gray-900 dark:text-white">
-                      {notification.title}
-                    </p>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">
-                      {notification.message}
-                    </p>
+      {/* Main Content Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        {/* Activity Feed */}
+        <div className="lg:col-span-2">
+          <div className="glass rounded-2xl p-6 animate-slide-up">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-xl font-bold text-gray-900 dark:text-white">
+                Actividad Reciente
+              </h3>
+              <button className="text-primary-600 hover:text-primary-700 dark:text-primary-400 text-sm font-medium">
+                Ver todo
+              </button>
+            </div>
+            
+            <div className="space-y-4">
+              {notifications.length > 0 ? (
+                notifications.map((notification, index) => (
+                  <div 
+                    key={notification.id} 
+                    className="flex items-start space-x-4 p-4 rounded-xl bg-gradient-to-r from-white/50 to-white/20 dark:from-gray-800/50 dark:to-gray-800/20 hover:from-white/70 hover:to-white/40 dark:hover:from-gray-800/70 dark:hover:to-gray-800/40 transition-all duration-300 animate-fade-in"
+                    style={{ animationDelay: `${index * 0.1}s` }}
+                  >
+                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary-500 to-secondary-500 flex items-center justify-center text-white font-bold">
+                      {notification.type === 'reminder' ? '⏰' : 
+                       notification.type === 'motivation' ? '💪' : '🎯'}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-gray-900 dark:text-white">
+                        {notification.title}
+                      </p>
+                      <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                        {notification.message}
+                      </p>
+                      <p className="text-xs text-gray-400 dark:text-gray-500 mt-2">
+                        {new Date(notification.created_at).toLocaleDateString()}
+                      </p>
+                    </div>
                   </div>
+                ))
+              ) : (
+                <div className="text-center py-8">
+                  <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-800 rounded-full flex items-center justify-center">
+                    <span className="text-2xl">📝</span>
+                  </div>
+                  <p className="text-gray-500 dark:text-gray-400">No hay notificaciones recientes</p>
                 </div>
-              ))
-            ) : (
-              <p className="text-gray-500 dark:text-gray-400">No hay notificaciones</p>
-            )}
+              )}
+            </div>
           </div>
         </div>
 
-        <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-            Progreso Semanal
-          </h3>
-          <div className="space-y-4">
-            <div className="flex justify-between items-center">
-              <span className="text-sm text-gray-500 dark:text-gray-400">Lunes</span>
-              <div className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center">
-                <span className="text-white text-xs">✓</span>
-              </div>
+        {/* Weekly Progress */}
+        <div className="space-y-6">
+          <div className="glass rounded-2xl p-6 animate-slide-up" style={{ animationDelay: '0.2s' }}>
+            <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-6">
+              Progreso Semanal
+            </h3>
+            <div className="space-y-4">
+              {weeklyProgress.map((day, index) => (
+                <div 
+                  key={day.day} 
+                  className="flex justify-between items-center animate-fade-in"
+                  style={{ animationDelay: `${index * 0.1}s` }}
+                >
+                  <span className="text-sm text-gray-600 dark:text-gray-400 font-medium">
+                    {day.day}
+                  </span>
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center transition-all duration-300 ${
+                    day.completed 
+                      ? 'bg-gradient-to-br from-green-500 to-emerald-500 text-white shadow-lg' 
+                      : 'bg-gray-200 dark:bg-gray-700 text-gray-400'
+                  }`}>
+                    {day.completed ? (
+                      <span className="text-sm font-bold">✓</span>
+                    ) : (
+                      <span className="text-sm">○</span>
+                    )}
+                  </div>
+                </div>
+              ))}
             </div>
-            <div className="flex justify-between items-center">
-              <span className="text-sm text-gray-500 dark:text-gray-400">Martes</span>
-              <div className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center">
-                <span className="text-white text-xs">✓</span>
-              </div>
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-sm text-gray-500 dark:text-gray-400">Miércoles</span>
-              <div className="w-6 h-6 bg-gray-300 dark:bg-gray-600 rounded-full"></div>
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-sm text-gray-500 dark:text-gray-400">Jueves</span>
-              <div className="w-6 h-6 bg-gray-300 dark:bg-gray-600 rounded-full"></div>
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-sm text-gray-500 dark:text-gray-400">Viernes</span>
-              <div className="w-6 h-6 bg-gray-300 dark:bg-gray-600 rounded-full"></div>
+          </div>
+
+          {/* Quick Actions */}
+          <div className="glass rounded-2xl p-6 animate-slide-up" style={{ animationDelay: '0.3s' }}>
+            <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-6">
+              Acciones Rápidas
+            </h3>
+            <div className="space-y-3">
+              <button className="w-full bg-gradient-to-r from-blue-500 to-cyan-500 text-white py-3 px-4 rounded-xl font-medium hover:shadow-lg hover:shadow-blue-500/25 transition-all duration-300">
+                Añadir Agua 💧
+              </button>
+              <button className="w-full bg-gradient-to-r from-green-500 to-emerald-500 text-white py-3 px-4 rounded-xl font-medium hover:shadow-lg hover:shadow-green-500/25 transition-all duration-300">
+                Registrar Comida 🍽️
+              </button>
+              <button className="w-full bg-gradient-to-r from-purple-500 to-pink-500 text-white py-3 px-4 rounded-xl font-medium hover:shadow-lg hover:shadow-purple-500/25 transition-all duration-300">
+                Iniciar Entrenamiento 🏋️
+              </button>
             </div>
           </div>
         </div>
