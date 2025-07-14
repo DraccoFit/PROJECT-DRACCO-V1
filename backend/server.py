@@ -2208,7 +2208,7 @@ async def get_supplement_recommendations(current_user: User = Depends(get_curren
         # Generate recommendations
         recommendations = generate_supplement_recommendations(
             current_user.evaluation,
-            health_metrics.dict() if health_metrics else {}
+            health_metrics if health_metrics else {}
         )
         
         # Save recommendations to database
