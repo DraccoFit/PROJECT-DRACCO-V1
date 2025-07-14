@@ -1930,8 +1930,18 @@ async def get_exercise_categories_stats():
         
         stats = await db.exercises.aggregate(pipeline).to_list(100)
         
+        # Convert to expected format
+        categories = {}
+        for stat in stats:
+            categories[stat["_id"]] = {
+                "count": stat["count"],
+                "avg_duration": stat["avg_duration"],
+                "avg_calories": stat["avg_calories"],
+                "avg_rating": stat["avg_rating"]
+            }
+        
         return {
-            "category_stats": stats,
+            "categories": categories,
             "total_exercises": sum(stat["count"] for stat in stats)
         }
         
