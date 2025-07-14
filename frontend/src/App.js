@@ -796,7 +796,7 @@ const MainApp = () => {
       case 'forum':
         return <Forum token={token} />;
       case 'profile':
-        return <div>Profile component coming soon...</div>;
+        return <Profile token={token} user={user} />;
       default:
         return <Dashboard />;
     }
