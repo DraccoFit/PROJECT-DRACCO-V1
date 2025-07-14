@@ -679,93 +679,144 @@ const AuthPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8">
-        <div>
-          <div className="mx-auto h-12 w-12 text-center text-4xl">💪</div>
-          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900 dark:text-white">
-            {isLogin ? 'Iniciar Sesión' : 'Crear Cuenta'}
-          </h2>
-          <p className="mt-2 text-center text-sm text-gray-600 dark:text-gray-400">
-            {isLogin ? '¿No tienes cuenta?' : '¿Ya tienes cuenta?'}
-            <button
-              onClick={() => setIsLogin(!isLogin)}
-              className="ml-1 font-medium text-blue-600 hover:text-blue-500 dark:text-blue-400"
-            >
-              {isLogin ? 'Registrarse' : 'Iniciar Sesión'}
-            </button>
-          </p>
+    <div className="min-h-screen relative overflow-hidden">
+      {/* Animated Background */}
+      <div className="absolute inset-0 bg-gradient-to-br from-primary-50 via-primary-100 to-secondary-50 dark:from-gray-900 dark:via-primary-900 dark:to-gray-800"></div>
+      
+      {/* Floating Elements */}
+      <div className="absolute top-10 left-10 w-20 h-20 bg-primary-400 rounded-full opacity-20 animate-float"></div>
+      <div className="absolute top-40 right-20 w-16 h-16 bg-secondary-400 rounded-full opacity-20 animate-float" style={{ animationDelay: '1s' }}></div>
+      <div className="absolute bottom-20 left-20 w-12 h-12 bg-success-400 rounded-full opacity-20 animate-float" style={{ animationDelay: '2s' }}></div>
+      <div className="absolute bottom-40 right-40 w-24 h-24 bg-primary-300 rounded-full opacity-20 animate-float" style={{ animationDelay: '0.5s' }}></div>
+      
+      {/* Hero Image */}
+      <div className="absolute inset-0 flex items-center justify-end pr-16">
+        <div className="hidden lg:block relative">
+          <img 
+            src="https://images.unsplash.com/photo-1541694458248-5aa2101c77df?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2NjZ8MHwxfHNlYXJjaHwzfHxmaXRuZXNzfGVufDB8fHxibHVlfDE3NTI0ODY4MjJ8MA&ixlib=rb-4.1.0&q=85"
+            alt="Fitness Hero"
+            className="w-96 h-96 object-cover rounded-3xl shadow-2xl opacity-80 animate-float"
+          />
         </div>
-
-        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
-          {error && (
-            <div className="bg-red-100 dark:bg-red-900 border border-red-400 text-red-700 dark:text-red-300 px-4 py-3 rounded">
-              {error}
+      </div>
+      
+      {/* Login Form */}
+      <div className="relative z-10 flex items-center justify-center min-h-screen py-12 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-md w-full space-y-8">
+          <div className="text-center animate-fade-in">
+            <div className="mx-auto h-16 w-16 bg-gradient-to-br from-primary-500 to-secondary-500 rounded-2xl flex items-center justify-center text-3xl text-white shadow-neon animate-pulse-glow">
+              💪
             </div>
-          )}
+            <h2 className="mt-6 text-center text-4xl font-bold gradient-text">
+              {isLogin ? 'Bienvenido' : 'Únete a FitnessPro'}
+            </h2>
+            <p className="mt-4 text-center text-lg text-gray-600 dark:text-gray-300">
+              {isLogin ? 'Continúa tu viaje fitness' : 'Comienza tu transformación'}
+            </p>
+            <p className="mt-2 text-center text-sm text-gray-500 dark:text-gray-400">
+              {isLogin ? '¿No tienes cuenta?' : '¿Ya tienes cuenta?'}
+              <button
+                onClick={() => setIsLogin(!isLogin)}
+                className="ml-1 font-medium text-primary-600 hover:text-primary-500 dark:text-primary-400 transition-colors"
+              >
+                {isLogin ? 'Registrarse' : 'Iniciar Sesión'}
+              </button>
+            </p>
+          </div>
 
-          <div className="rounded-md shadow-sm space-y-4">
-            {!isLogin && (
-              <div>
-                <label htmlFor="fullName" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Nombre Completo
-                </label>
-                <input
-                  id="fullName"
-                  name="fullName"
-                  type="text"
-                  required={!isLogin}
-                  value={formData.fullName}
-                  onChange={handleChange}
-                  className="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 placeholder-gray-500 dark:placeholder-gray-400 text-gray-900 dark:text-white dark:bg-gray-700 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
-                  placeholder="Tu nombre completo"
-                />
+          <div className="glass rounded-3xl p-8 shadow-glass animate-card-enter">
+            {error && (
+              <div className="mb-6 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 px-4 py-3 rounded-xl animate-slide-up">
+                <div className="flex items-center">
+                  <span className="text-red-500 mr-2">⚠️</span>
+                  {error}
+                </div>
               </div>
             )}
 
-            <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                Email
-              </label>
-              <input
-                id="email"
-                name="email"
-                type="email"
-                required
-                value={formData.email}
-                onChange={handleChange}
-                className="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 placeholder-gray-500 dark:placeholder-gray-400 text-gray-900 dark:text-white dark:bg-gray-700 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
-                placeholder="tu@email.com"
-              />
-            </div>
+            <form className="space-y-6" onSubmit={handleSubmit}>
+              {!isLogin && (
+                <div className="animate-slide-up">
+                  <label htmlFor="fullName" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Nombre Completo
+                  </label>
+                  <input
+                    id="fullName"
+                    name="fullName"
+                    type="text"
+                    required={!isLogin}
+                    value={formData.fullName}
+                    onChange={handleChange}
+                    className="form-input w-full px-4 py-3 rounded-xl text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500 transition-all duration-300"
+                    placeholder="Tu nombre completo"
+                  />
+                </div>
+              )}
 
-            <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                Contraseña
-              </label>
-              <input
-                id="password"
-                name="password"
-                type="password"
-                required
-                value={formData.password}
-                onChange={handleChange}
-                className="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 placeholder-gray-500 dark:placeholder-gray-400 text-gray-900 dark:text-white dark:bg-gray-700 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
-                placeholder="Tu contraseña"
-              />
+              <div className="animate-slide-up" style={{ animationDelay: '0.1s' }}>
+                <label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Email
+                </label>
+                <input
+                  id="email"
+                  name="email"
+                  type="email"
+                  required
+                  value={formData.email}
+                  onChange={handleChange}
+                  className="form-input w-full px-4 py-3 rounded-xl text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500 transition-all duration-300"
+                  placeholder="tu@email.com"
+                />
+              </div>
+
+              <div className="animate-slide-up" style={{ animationDelay: '0.2s' }}>
+                <label htmlFor="password" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Contraseña
+                </label>
+                <input
+                  id="password"
+                  name="password"
+                  type="password"
+                  required
+                  value={formData.password}
+                  onChange={handleChange}
+                  className="form-input w-full px-4 py-3 rounded-xl text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500 transition-all duration-300"
+                  placeholder="Tu contraseña"
+                />
+              </div>
+
+              <div className="animate-slide-up" style={{ animationDelay: '0.3s' }}>
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="btn-primary w-full py-3 px-6 rounded-xl text-white font-semibold text-lg shadow-lg hover:shadow-neon disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300"
+                >
+                  {loading ? (
+                    <div className="flex items-center justify-center">
+                      <div className="spinner mr-2"></div>
+                      Procesando...
+                    </div>
+                  ) : (
+                    isLogin ? 'Iniciar Sesión' : 'Crear Cuenta'
+                  )}
+                </button>
+              </div>
+            </form>
+
+            <div className="mt-6 text-center">
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                Al continuar, aceptas nuestros{' '}
+                <a href="#" className="text-primary-600 hover:text-primary-500 dark:text-primary-400">
+                  Términos de Servicio
+                </a>{' '}
+                y{' '}
+                <a href="#" className="text-primary-600 hover:text-primary-500 dark:text-primary-400">
+                  Política de Privacidad
+                </a>
+              </p>
             </div>
           </div>
-
-          <div>
-            <button
-              type="submit"
-              disabled={loading}
-              className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {loading ? 'Procesando...' : (isLogin ? 'Iniciar Sesión' : 'Crear Cuenta')}
-            </button>
-          </div>
-        </form>
+        </div>
       </div>
     </div>
   );
