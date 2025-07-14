@@ -1022,27 +1022,49 @@ async def generate_ai_response(user_message: str, user_context: dict) -> str:
     except Exception as e:
         return f"Error al generar respuesta: {str(e)}"
 
-async def generate_nutrition_plan_ai(user_evaluation: dict, daily_calories: float) -> dict:
+async def generate_nutrition_plan_ai(user_evaluation, daily_calories: float) -> dict:
     """Generate AI-powered nutrition plan"""
     if not OPENAI_API_KEY:
         return {"error": "OpenAI API key not configured"}
     
     try:
+        # Handle both dict and Pydantic model
+        if hasattr(user_evaluation, 'age'):
+            age = user_evaluation.age
+            gender = user_evaluation.gender
+            weight = user_evaluation.weight
+            height = user_evaluation.height
+            activity_level = user_evaluation.activity_level
+            goal = user_evaluation.goal
+            food_preferences = user_evaluation.food_preferences
+            food_allergies = user_evaluation.food_allergies
+            health_conditions = user_evaluation.health_conditions
+        else:
+            age = user_evaluation.get('age', 'No especificado')
+            gender = user_evaluation.get('gender', 'No especificado')
+            weight = user_evaluation.get('weight', 'No especificado')
+            height = user_evaluation.get('height', 'No especificado')
+            activity_level = user_evaluation.get('activity_level', 'No especificado')
+            goal = user_evaluation.get('goal', 'No especificado')
+            food_preferences = user_evaluation.get('food_preferences', [])
+            food_allergies = user_evaluation.get('food_allergies', [])
+            health_conditions = user_evaluation.get('health_conditions', [])
+        
         # Create detailed prompt for nutrition plan generation
         prompt = f"""
         Genera un plan nutricional semanal detallado para un usuario con las siguientes características:
         
         DATOS DEL USUARIO:
-        - Edad: {user_evaluation.get('age', 'No especificado')} años
-        - Género: {user_evaluation.get('gender', 'No especificado')}
-        - Peso: {user_evaluation.get('weight', 'No especificado')} kg
-        - Altura: {user_evaluation.get('height', 'No especificado')} cm
-        - Nivel de actividad: {user_evaluation.get('activity_level', 'No especificado')}
-        - Objetivo: {user_evaluation.get('goal', 'No especificado')}
+        - Edad: {age} años
+        - Género: {gender}
+        - Peso: {weight} kg
+        - Altura: {height} cm
+        - Nivel de actividad: {activity_level}
+        - Objetivo: {goal}
         - Calorías diarias: {daily_calories} kcal
-        - Preferencias alimentarias: {user_evaluation.get('food_preferences', [])}
-        - Alergias: {user_evaluation.get('food_allergies', [])}
-        - Condiciones de salud: {user_evaluation.get('health_conditions', [])}
+        - Preferencias alimentarias: {food_preferences}
+        - Alergias: {food_allergies}
+        - Condiciones de salud: {health_conditions}
         
         INSTRUCCIONES:
         1. Crea un plan para 7 días (Lunes a Domingo)
