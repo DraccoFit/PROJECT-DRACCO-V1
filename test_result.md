@@ -266,15 +266,18 @@
 
   - task: "Supplement Recommendations"
     implemented: true
-    working: false
+    working: true
     file: "server.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
         - working: false
           agent: "main"
           comment: "Added personalized supplement recommendation system based on user goals, age, gender, activity level, and health metrics. Includes supplement search, details, and recommendation logic."
+        - working: true
+          agent: "testing"
+          comment: "✅ TESTED - Supplement recommendations working correctly with personalized suggestions based on user profile and health metrics"
 
 ## frontend:
   - task: "Authentication UI"
