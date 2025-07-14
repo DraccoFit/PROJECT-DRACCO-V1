@@ -198,7 +198,7 @@
     file: "server.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: false
+    needs_retesting: true
     status_history:
         - working: false
           agent: "main"
@@ -206,6 +206,21 @@
         - working: true
           agent: "testing"
           comment: "Tested workout plan endpoints - both GET /workout-plans and POST /workout-plans/generate are working correctly. Plan generation creates basic structure successfully."
+        - working: false
+          agent: "main"
+          comment: "Enhanced with AI-powered workout plan generation using OpenAI GPT-4. Added comprehensive workout creation with exercises, sets, reps, and recommendations."
+
+  - task: "Health Metrics Calculator"
+    implemented: true
+    working: false
+    file: "server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+        - working: false
+          agent: "main"
+          comment: "Added comprehensive health metrics including BMI calculator, body fat percentage, ideal weight calculations, calorie needs, and health recommendations. Added endpoints for health metrics calculation, history, and analysis."
 
 ## frontend:
   - task: "Authentication UI"
