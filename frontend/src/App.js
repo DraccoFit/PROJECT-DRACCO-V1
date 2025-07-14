@@ -766,7 +766,15 @@ const AuthPage = () => {
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const { login, register } = useAuth();
+  const { login, register, user } = useAuth();
+  const navigate = useNavigate();
+
+  // Redirect to main app if user is authenticated
+  useEffect(() => {
+    if (user) {
+      navigate('/dashboard');
+    }
+  }, [user, navigate]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
