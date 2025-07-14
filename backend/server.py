@@ -330,6 +330,151 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
         raise credentials_exception
     return User(**user)
 
+def calculate_bmi(weight: float, height: float) -> float:
+    """Calculate Body Mass Index"""
+    height_m = height / 100  # Convert cm to meters
+    return weight / (height_m ** 2)
+
+def get_bmi_category(bmi: float) -> str:
+    """Get BMI category based on BMI value"""
+    if bmi < 18.5:
+        return "Bajo peso"
+    elif bmi < 25:
+        return "Peso normal"
+    elif bmi < 30:
+        return "Sobrepeso"
+    else:
+        return "Obesidad"
+
+def calculate_body_fat_percentage(gender: str, age: int, bmi: float) -> float:
+    """Calculate body fat percentage using BMI formula"""
+    if gender.lower() == "male":
+        body_fat = (1.20 * bmi) + (0.23 * age) - 16.2
+    else:  # female
+        body_fat = (1.20 * bmi) + (0.23 * age) - 5.4
+    
+    return max(0, min(100, body_fat))  # Clamp between 0 and 100
+
+def calculate_body_fat_navy(gender: str, height: float, neck: float, waist: float, hip: float = None) -> float:
+    """Calculate body fat percentage using Navy method"""
+    if gender.lower() == "male":
+        body_fat = 495 / (1.0324 - 0.19077 * math.log10(waist - neck) + 0.15456 * math.log10(height)) - 450
+    else:  # female
+        if hip is None:
+            return 0
+        body_fat = 495 / (1.29579 - 0.35004 * math.log10(waist + hip - neck) + 0.22100 * math.log10(height)) - 450
+    
+    return max(0, min(100, body_fat))
+
+def calculate_ideal_weight(height: float, gender: str) -> tuple:
+    """Calculate ideal weight range using multiple formulas"""
+    height_m = height / 100
+    
+    # BMI-based ideal weight (BMI 18.5-24.9)
+    min_weight = 18.5 * (height_m ** 2)
+    max_weight = 24.9 * (height_m ** 2)
+    
+    # Hamwi formula
+    if gender.lower() == "male":
+        hamwi_weight = 48 + 2.7 * ((height - 152.4) / 2.54)
+    else:  # female
+        hamwi_weight = 45.5 + 2.2 * ((height - 152.4) / 2.54)
+    
+    # Devine formula
+    if gender.lower() == "male":
+        devine_weight = 50 + 2.3 * ((height - 152.4) / 2.54)
+    else:  # female
+        devine_weight = 45.5 + 2.3 * ((height - 152.4) / 2.54)
+    
+    return {
+        "bmi_range": {"min": round(min_weight, 1), "max": round(max_weight, 1)},
+        "hamwi": round(hamwi_weight, 1),
+        "devine": round(devine_weight, 1)
+    }
+
+def calculate_daily_calorie_needs(weight: float, height: float, age: int, gender: str, activity_level: str) -> dict:
+    """Calculate daily calorie needs using multiple formulas"""
+    # Harris-Benedict Equation
+    if gender.lower() == "male":
+        bmr_harris = 88.362 + (13.397 * weight) + (4.799 * height) - (5.677 * age)
+    else:
+        bmr_harris = 447.593 + (9.247 * weight) + (3.098 * height) - (4.330 * age)
+    
+    # Mifflin-St Jeor Equation (more accurate)
+    if gender.lower() == "male":
+        bmr_mifflin = (10 * weight) + (6.25 * height) - (5 * age) + 5
+    else:
+        bmr_mifflin = (10 * weight) + (6.25 * height) - (5 * age) - 161
+    
+    # Activity multipliers
+    activity_multipliers = {
+        "sedentary": 1.2,
+        "lightly_active": 1.375,
+        "moderately_active": 1.55,
+        "very_active": 1.725,
+        "extremely_active": 1.9
+    }
+    
+    multiplier = activity_multipliers.get(activity_level, 1.2)
+    
+    return {
+        "bmr_harris": round(bmr_harris, 0),
+        "bmr_mifflin": round(bmr_mifflin, 0),
+        "tdee_harris": round(bmr_harris * multiplier, 0),
+        "tdee_mifflin": round(bmr_mifflin * multiplier, 0),
+        "recommended_bmr": round(bmr_mifflin, 0),  # Mifflin is more accurate
+        "recommended_tdee": round(bmr_mifflin * multiplier, 0)
+    }
+
+def generate_health_recommendations(bmi: float, body_fat: float, age: int, gender: str, goal: str) -> list:
+    """Generate personalized health recommendations"""
+    recommendations = []
+    
+    # BMI-based recommendations
+    if bmi < 18.5:
+        recommendations.append("Considera aumentar tu ingesta calórica de manera saludable")
+        recommendations.append("Incluye más proteínas y grasas saludables en tu dieta")
+        recommendations.append("Consulta con un nutricionista para un plan personalizado")
+    elif bmi > 25:
+        recommendations.append("Considera reducir tu ingesta calórica gradualmente")
+        recommendations.append("Aumenta tu actividad física diaria")
+        recommendations.append("Enfócate en alimentos nutritivos y bajos en calorías")
+    
+    # Body fat recommendations
+    if gender.lower() == "male":
+        if body_fat > 25:
+            recommendations.append("Tu porcentaje de grasa corporal es elevado, considera ejercicio cardiovascular")
+        elif body_fat < 6:
+            recommendations.append("Tu porcentaje de grasa corporal es muy bajo, asegúrate de mantener una nutrición adecuada")
+    else:  # female
+        if body_fat > 32:
+            recommendations.append("Tu porcentaje de grasa corporal es elevado, considera ejercicio cardiovascular")
+        elif body_fat < 14:
+            recommendations.append("Tu porcentaje de grasa corporal es muy bajo, asegúrate de mantener una nutrición adecuada")
+    
+    # Age-based recommendations
+    if age > 40:
+        recommendations.append("Incluye ejercicios de resistencia para mantener la masa muscular")
+        recommendations.append("Considera suplementos de calcio y vitamina D")
+    
+    # Goal-based recommendations
+    if goal == "lose_weight":
+        recommendations.append("Crea un déficit calórico moderado (300-500 cal/día)")
+        recommendations.append("Combina ejercicio cardiovascular con entrenamiento de fuerza")
+    elif goal == "gain_weight":
+        recommendations.append("Aumenta tu ingesta calórica con alimentos nutritivos")
+        recommendations.append("Enfócate en entrenamiento de fuerza para ganar masa muscular")
+    elif goal == "build_muscle":
+        recommendations.append("Consume suficientes proteínas (1.6-2.2g por kg de peso)")
+        recommendations.append("Prioriza ejercicios compuestos en tu entrenamiento")
+    
+    # General recommendations
+    recommendations.append("Mantén una hidratación adecuada (2-3 litros de agua al día)")
+    recommendations.append("Asegúrate de dormir 7-9 horas cada noche")
+    recommendations.append("Realiza chequeos médicos regulares")
+    
+    return recommendations
+
 def calculate_tmb(weight: float, height: float, age: int, gender: Gender) -> float:
     """Calculate Total Metabolic Rate using Harris-Benedict equation"""
     if gender == Gender.male:
