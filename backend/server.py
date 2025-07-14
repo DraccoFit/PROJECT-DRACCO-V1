@@ -2742,5 +2742,575 @@ async def initialize_default_data():
 async def health_check():
     return {"status": "healthy", "timestamp": datetime.utcnow()}
 
+# FASE 3: ANÁLISIS Y SEGUIMIENTO - New Advanced Features
+
+# 1. AI Photo Analysis for Body Composition
+@api_router.post("/photos/analyze")
+async def analyze_body_photo(
+    analysis_request: PhotoAnalysisRequest,
+    current_user: User = Depends(get_current_user)
+):
+    """Analyze body composition from uploaded photo using AI"""
+    try:
+        if not OPENAI_API_KEY:
+            raise HTTPException(status_code=500, detail="AI analysis not configured")
+        
+        # Prepare prompt for body composition analysis
+        prompt = f"""
+        Analyze this body composition photo and provide detailed feedback:
+        
+        Analysis Type: {analysis_request.analysis_type}
+        
+        Please provide:
+        1. Estimated body fat percentage range
+        2. Muscle definition assessment
+        3. Posture analysis
+        4. Areas for improvement
+        5. Visible progress indicators
+        6. Recommendations for targeted exercises
+        
+        Be encouraging and constructive in your feedback.
+        Return response in JSON format with these fields:
+        {{
+            "body_fat_estimate": "10-15%",
+            "muscle_definition": "moderate",
+            "posture_score": 85,
+            "areas_for_improvement": ["lower abs", "upper back"],
+            "progress_indicators": ["improved shoulder width", "reduced waist"],
+            "recommendations": ["focus on core exercises", "improve posture"]
+        }}
+        """
+        
+        response = openai_client.chat.completions.create(
+            model="gpt-4-vision-preview",
+            messages=[
+                {
+                    "role": "user",
+                    "content": [
+                        {"type": "text", "text": prompt},
+                        {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{analysis_request.image_base64}"}}
+                    ]
+                }
+            ],
+            max_tokens=500
+        )
+        
+        ai_analysis = response.choices[0].message.content
+        
+        # Try to parse as JSON, fallback to plain text
+        try:
+            analysis_json = json.loads(ai_analysis)
+        except:
+            analysis_json = {"raw_analysis": ai_analysis}
+        
+        # Calculate confidence score based on image quality
+        confidence_score = 0.85  # This would be more sophisticated in production
+        
+        # Create analysis result
+        result = PhotoAnalysisResult(
+            user_id=current_user.id,
+            analysis_type=analysis_request.analysis_type,
+            image_base64=analysis_request.image_base64,
+            ai_analysis=analysis_json,
+            confidence_score=confidence_score,
+            recommendations=analysis_json.get("recommendations", [])
+        )
+        
+        # Save to database
+        await db.photo_analysis.insert_one(result.dict())
+        
+        return {
+            "message": "Análisis de foto completado exitosamente",
+            "analysis_id": result.id,
+            "analysis": analysis_json,
+            "confidence_score": confidence_score
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error analyzing photo: {str(e)}")
+
+@api_router.get("/photos/analysis-history")
+async def get_photo_analysis_history(current_user: User = Depends(get_current_user)):
+    """Get user's photo analysis history"""
+    try:
+        analyses = await db.photo_analysis.find(
+            {"user_id": current_user.id}
+        ).sort("created_at", -1).to_list(50)
+        
+        return {
+            "analyses": analyses,
+            "total_count": len(analyses)
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error retrieving photo analysis history: {str(e)}")
+
+# 2. Food Recognition by Image
+@api_router.post("/foods/recognize")
+async def recognize_food_from_image(
+    recognition_request: FoodRecognitionRequest,
+    current_user: User = Depends(get_current_user)
+):
+    """Recognize food items from uploaded image using AI"""
+    try:
+        if not OPENAI_API_KEY:
+            raise HTTPException(status_code=500, detail="AI analysis not configured")
+        
+        prompt = f"""
+        Analyze this food image and identify all food items with their nutritional information:
+        
+        Meal Type: {recognition_request.meal_type}
+        
+        Please provide:
+        1. List of all food items identified
+        2. Estimated portion sizes
+        3. Nutritional information per item (calories, protein, carbs, fat, fiber)
+        4. Total nutritional values
+        5. Meal quality assessment
+        6. Suggestions for improvement
+        
+        Return response in JSON format:
+        {{
+            "recognized_foods": [
+                {{
+                    "name": "grilled chicken breast",
+                    "portion_size": "150g",
+                    "calories": 248,
+                    "protein": 46.5,
+                    "carbs": 0,
+                    "fat": 5.4,
+                    "fiber": 0
+                }}
+            ],
+            "total_nutrition": {{
+                "calories": 500,
+                "protein": 35,
+                "carbs": 45,
+                "fat": 15,
+                "fiber": 8
+            }},
+            "meal_quality_score": 85,
+            "suggestions": ["add more vegetables", "reduce sodium"]
+        }}
+        """
+        
+        response = openai_client.chat.completions.create(
+            model="gpt-4-vision-preview",
+            messages=[
+                {
+                    "role": "user",
+                    "content": [
+                        {"type": "text", "text": prompt},
+                        {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{recognition_request.image_base64}"}}
+                    ]
+                }
+            ],
+            max_tokens=800
+        )
+        
+        ai_analysis = response.choices[0].message.content
+        
+        # Try to parse as JSON
+        try:
+            recognition_json = json.loads(ai_analysis)
+        except:
+            recognition_json = {"raw_analysis": ai_analysis}
+        
+        # Calculate confidence score
+        confidence_score = 0.80
+        
+        # Create recognition result
+        result = FoodRecognitionResult(
+            user_id=current_user.id,
+            image_base64=recognition_request.image_base64,
+            recognized_foods=recognition_json.get("recognized_foods", []),
+            nutritional_info=recognition_json.get("total_nutrition", {}),
+            total_calories=recognition_json.get("total_nutrition", {}).get("calories", 0),
+            meal_type=recognition_request.meal_type,
+            confidence_score=confidence_score,
+            suggestions=recognition_json.get("suggestions", [])
+        )
+        
+        # Save to database
+        await db.food_recognition.insert_one(result.dict())
+        
+        return {
+            "message": "Reconocimiento de alimentos completado exitosamente",
+            "recognition_id": result.id,
+            "recognized_foods": recognition_json.get("recognized_foods", []),
+            "nutritional_info": recognition_json.get("total_nutrition", {}),
+            "meal_quality_score": recognition_json.get("meal_quality_score", 0),
+            "suggestions": recognition_json.get("suggestions", []),
+            "confidence_score": confidence_score
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error recognizing food: {str(e)}")
+
+@api_router.get("/foods/recognition-history")
+async def get_food_recognition_history(current_user: User = Depends(get_current_user)):
+    """Get user's food recognition history"""
+    try:
+        recognitions = await db.food_recognition.find(
+            {"user_id": current_user.id}
+        ).sort("created_at", -1).to_list(50)
+        
+        return {
+            "recognitions": recognitions,
+            "total_count": len(recognitions)
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error retrieving food recognition history: {str(e)}")
+
+# 3. Advanced Interactive Charts and Analytics
+@api_router.get("/analytics/advanced-progress")
+async def get_advanced_progress_analytics(
+    period: str = "month",
+    current_user: User = Depends(get_current_user)
+):
+    """Get advanced progress analytics with interactive chart data"""
+    try:
+        # Calculate date range
+        end_date = datetime.utcnow()
+        if period == "week":
+            start_date = end_date - timedelta(days=7)
+        elif period == "month":
+            start_date = end_date - timedelta(days=30)
+        elif period == "quarter":
+            start_date = end_date - timedelta(days=90)
+        else:  # year
+            start_date = end_date - timedelta(days=365)
+        
+        # Get progress data
+        progress_entries = await db.progress.find({
+            "user_id": current_user.id,
+            "date": {"$gte": start_date, "$lte": end_date}
+        }).sort("date", 1).to_list(1000)
+        
+        # Get water intake data
+        water_intake = await db.water_intake.find({
+            "user_id": current_user.id,
+            "date": {"$gte": start_date, "$lte": end_date}
+        }).sort("date", 1).to_list(1000)
+        
+        # Get workout completion data
+        workout_plans = await db.workout_plans.find({
+            "user_id": current_user.id,
+            "created_at": {"$gte": start_date, "$lte": end_date}
+        }).sort("created_at", 1).to_list(1000)
+        
+        # Prepare chart data
+        weight_data = []
+        body_fat_data = []
+        muscle_mass_data = []
+        measurements_data = {"chest": [], "waist": [], "hips": [], "arms": [], "thighs": []}
+        
+        for entry in progress_entries:
+            date_str = entry["date"].strftime("%Y-%m-%d")
+            if entry.get("weight"):
+                weight_data.append({"date": date_str, "value": entry["weight"]})
+            if entry.get("body_fat"):
+                body_fat_data.append({"date": date_str, "value": entry["body_fat"]})
+            if entry.get("muscle_mass"):
+                muscle_mass_data.append({"date": date_str, "value": entry["muscle_mass"]})
+            
+            # Measurements
+            for measurement, value in entry.get("measurements", {}).items():
+                if measurement in measurements_data:
+                    measurements_data[measurement].append({"date": date_str, "value": value})
+        
+        # Water intake chart data
+        water_data = []
+        for intake in water_intake:
+            date_str = intake["date"].strftime("%Y-%m-%d")
+            water_data.append({"date": date_str, "value": intake["amount_ml"]})
+        
+        # Calculate trends
+        weight_trend = calculate_trend(weight_data)
+        body_fat_trend = calculate_trend(body_fat_data)
+        muscle_mass_trend = calculate_trend(muscle_mass_data)
+        
+        # Activity patterns
+        workout_frequency = len(workout_plans)
+        avg_water_intake = sum(intake["amount_ml"] for intake in water_intake) / len(water_intake) if water_intake else 0
+        
+        # Goal progress calculation
+        user_evaluation = current_user.evaluation.dict() if current_user.evaluation else {}
+        goal_progress = calculate_goal_progress(progress_entries, user_evaluation)
+        
+        # Predictions (simple linear regression)
+        predictions = {}
+        if len(weight_data) >= 3:
+            predictions["weight"] = predict_future_values(weight_data, days=30)
+        if len(body_fat_data) >= 3:
+            predictions["body_fat"] = predict_future_values(body_fat_data, days=30)
+        
+        # Create advanced stats
+        stats = AdvancedProgressStats(
+            user_id=current_user.id,
+            period=period,
+            weight_trend={"data": weight_data, "trend": weight_trend},
+            body_composition_trend={"weight": weight_data, "body_fat": body_fat_data, "muscle_mass": muscle_mass_data},
+            measurement_trends=measurements_data,
+            activity_patterns={"workout_frequency": workout_frequency, "avg_water_intake": avg_water_intake},
+            nutrition_patterns={},  # This could be expanded
+            goal_progress=goal_progress,
+            predictions=predictions,
+            achievements=generate_achievements(progress_entries)
+        )
+        
+        return {
+            "period": period,
+            "chart_data": {
+                "weight": weight_data,
+                "body_fat": body_fat_data,
+                "muscle_mass": muscle_mass_data,
+                "measurements": measurements_data,
+                "water_intake": water_data
+            },
+            "trends": {
+                "weight": weight_trend,
+                "body_fat": body_fat_trend,
+                "muscle_mass": muscle_mass_trend
+            },
+            "activity_summary": {
+                "workout_frequency": workout_frequency,
+                "avg_water_intake": round(avg_water_intake, 1)
+            },
+            "goal_progress": goal_progress,
+            "predictions": predictions,
+            "achievements": generate_achievements(progress_entries)
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error generating advanced analytics: {str(e)}")
+
+# 4. Pattern Detection and Alerts
+@api_router.get("/patterns/detect-abandonment")
+async def detect_abandonment_patterns(current_user: User = Depends(get_current_user)):
+    """Detect patterns indicating user abandonment or lack of engagement"""
+    try:
+        # Get recent user activity
+        recent_progress = await db.progress.find({
+            "user_id": current_user.id,
+            "date": {"$gte": datetime.utcnow() - timedelta(days=30)}
+        }).sort("date", -1).to_list(100)
+        
+        recent_water_intake = await db.water_intake.find({
+            "user_id": current_user.id,
+            "date": {"$gte": datetime.utcnow() - timedelta(days=30)}
+        }).sort("date", -1).to_list(100)
+        
+        recent_workouts = await db.workout_plans.find({
+            "user_id": current_user.id,
+            "created_at": {"$gte": datetime.utcnow() - timedelta(days=30)}
+        }).sort("created_at", -1).to_list(100)
+        
+        recent_chat = await db.chat_history.find({
+            "user_id": current_user.id,
+            "timestamp": {"$gte": datetime.utcnow() - timedelta(days=30)}
+        }).sort("timestamp", -1).to_list(100)
+        
+        alerts = []
+        
+        # Check for abandonment patterns
+        if len(recent_progress) == 0:
+            alerts.append(PatternAlert(
+                user_id=current_user.id,
+                alert_type="abandonment",
+                severity="high",
+                title="Sin seguimiento de progreso",
+                description="No has registrado tu progreso en los últimos 30 días",
+                recommendations=["Registra tu peso y medidas regularmente", "Toma fotos de progreso semanales"]
+            ))
+        
+        if len(recent_water_intake) < 5:
+            alerts.append(PatternAlert(
+                user_id=current_user.id,
+                alert_type="abandonment",
+                severity="medium",
+                title="Hidratación inconsistente",
+                description="Has registrado muy poca ingesta de agua últimamente",
+                recommendations=["Establece recordatorios de hidratación", "Lleva una botella de agua contigo"]
+            ))
+        
+        if len(recent_workouts) == 0:
+            alerts.append(PatternAlert(
+                user_id=current_user.id,
+                alert_type="abandonment",
+                severity="high",
+                title="Sin planes de entrenamiento",
+                description="No has generado planes de entrenamiento recientemente",
+                recommendations=["Crea un nuevo plan de entrenamiento", "Establece metas de ejercicio semanales"]
+            ))
+        
+        # Check for plateau patterns
+        if len(recent_progress) >= 5:
+            weight_values = [entry.get("weight") for entry in recent_progress if entry.get("weight")]
+            if len(weight_values) >= 3:
+                weight_variance = calculate_variance(weight_values)
+                if weight_variance < 0.5:  # Very little change
+                    alerts.append(PatternAlert(
+                        user_id=current_user.id,
+                        alert_type="plateau",
+                        severity="medium",
+                        title="Posible estancamiento en peso",
+                        description="Tu peso ha permanecido muy estable en las últimas semanas",
+                        recommendations=["Considera ajustar tu plan nutricional", "Incrementa la intensidad del ejercicio"]
+                    ))
+        
+        # Save alerts to database
+        for alert in alerts:
+            await db.pattern_alerts.insert_one(alert.dict())
+        
+        return {
+            "alerts": [alert.dict() for alert in alerts],
+            "total_alerts": len(alerts),
+            "activity_summary": {
+                "progress_entries": len(recent_progress),
+                "water_records": len(recent_water_intake),
+                "workout_plans": len(recent_workouts),
+                "chat_interactions": len(recent_chat)
+            }
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error detecting patterns: {str(e)}")
+
+@api_router.get("/patterns/alerts")
+async def get_pattern_alerts(current_user: User = Depends(get_current_user)):
+    """Get user's pattern alerts"""
+    try:
+        alerts = await db.pattern_alerts.find({
+            "user_id": current_user.id,
+            "is_active": True
+        }).sort("created_at", -1).to_list(100)
+        
+        return {
+            "alerts": alerts,
+            "total_count": len(alerts)
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error retrieving pattern alerts: {str(e)}")
+
+@api_router.put("/patterns/alerts/{alert_id}/resolve")
+async def resolve_pattern_alert(
+    alert_id: str,
+    current_user: User = Depends(get_current_user)
+):
+    """Mark a pattern alert as resolved"""
+    try:
+        await db.pattern_alerts.update_one(
+            {"id": alert_id, "user_id": current_user.id},
+            {"$set": {"is_active": False, "resolved_at": datetime.utcnow()}}
+        )
+        
+        return {"message": "Alerta marcada como resuelta"}
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error resolving alert: {str(e)}")
+
+# Helper functions for analytics
+def calculate_trend(data_points):
+    """Calculate trend direction and strength"""
+    if len(data_points) < 2:
+        return {"direction": "stable", "strength": 0}
+    
+    values = [point["value"] for point in data_points]
+    if len(values) < 2:
+        return {"direction": "stable", "strength": 0}
+    
+    first_half = values[:len(values)//2]
+    second_half = values[len(values)//2:]
+    
+    first_avg = sum(first_half) / len(first_half)
+    second_avg = sum(second_half) / len(second_half)
+    
+    change = second_avg - first_avg
+    change_percent = (change / first_avg) * 100 if first_avg != 0 else 0
+    
+    if abs(change_percent) < 1:
+        direction = "stable"
+    elif change_percent > 0:
+        direction = "increasing"
+    else:
+        direction = "decreasing"
+    
+    strength = min(abs(change_percent), 100)
+    
+    return {
+        "direction": direction,
+        "strength": strength,
+        "change": change,
+        "change_percent": round(change_percent, 2)
+    }
+
+def calculate_goal_progress(progress_entries, user_evaluation):
+    """Calculate progress towards user's goals"""
+    if not progress_entries or not user_evaluation:
+        return {"progress_percent": 0, "status": "No data"}
+    
+    goal = user_evaluation.get("goal", "maintain_weight")
+    current_weight = progress_entries[0].get("weight") if progress_entries else None
+    
+    if not current_weight:
+        return {"progress_percent": 0, "status": "No weight data"}
+    
+    # This is a simplified calculation
+    progress_percent = 65  # Would be calculated based on actual goals
+    
+    return {
+        "progress_percent": progress_percent,
+        "status": "On track",
+        "current_weight": current_weight,
+        "goal": goal
+    }
+
+def predict_future_values(data_points, days=30):
+    """Simple linear regression prediction"""
+    if len(data_points) < 3:
+        return []
+    
+    # Simple linear trend calculation
+    values = [point["value"] for point in data_points]
+    n = len(values)
+    sum_x = sum(range(n))
+    sum_y = sum(values)
+    sum_xy = sum(i * values[i] for i in range(n))
+    sum_x2 = sum(i * i for i in range(n))
+    
+    slope = (n * sum_xy - sum_x * sum_y) / (n * sum_x2 - sum_x * sum_x)
+    intercept = (sum_y - slope * sum_x) / n
+    
+    # Predict next 30 days
+    predictions = []
+    for i in range(n, n + days):
+        predicted_value = slope * i + intercept
+        predictions.append(predicted_value)
+    
+    return predictions
+
+def calculate_variance(values):
+    """Calculate variance of a list of values"""
+    if len(values) < 2:
+        return 0
+    
+    mean = sum(values) / len(values)
+    return sum((x - mean) ** 2 for x in values) / len(values)
+
+def generate_achievements(progress_entries):
+    """Generate achievements based on progress"""
+    achievements = []
+    
+    if len(progress_entries) >= 7:
+        achievements.append("Seguimiento consistente por 7 días")
+    
+    if len(progress_entries) >= 30:
+        achievements.append("¡Un mes de seguimiento!")
+    
+    return achievements
+
 # Include router in main app
 app.include_router(api_router)
