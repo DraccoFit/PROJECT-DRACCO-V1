@@ -646,6 +646,7 @@ class FitnessAppTester:
             ("Exercise Endpoints", self.test_exercises),
             ("Water Intake", self.test_water_intake),
             ("Notifications", self.test_notifications),
+            ("OpenAI Integration", self.test_openai_integration_scenarios),
             ("Enhanced Nutrition System", self.test_enhanced_nutrition_system),
             ("Workout Plans", self.test_workout_plans),
         ]
