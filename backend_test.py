@@ -629,6 +629,8 @@ class FitnessAppTester:
                     self.log_result("AI Nutrition Generation", False, "Invalid error response", gen_response.text)
         
         return True
+    
+    def run_all_tests(self):
         """Run all backend tests"""
         print("🚀 Starting Fitness App Backend API Tests")
         print(f"Testing against: {self.base_url}")
