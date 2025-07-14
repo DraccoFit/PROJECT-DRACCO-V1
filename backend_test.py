@@ -1751,6 +1751,462 @@ class FitnessAppTester:
         
         self.log_result("Supplement Recommendations", True, "Supplement recommendations system tested successfully")
         return True
+
+    def test_fase3_ai_photo_analysis(self):
+        """Test FASE 3: AI Photo Analysis endpoints"""
+        if not self.auth_token:
+            self.log_result("FASE 3: AI Photo Analysis", False, "No auth token available")
+            return False
+        
+        print("\n📸 Testing FASE 3: AI Photo Analysis")
+        print("=" * 50)
+        
+        # Step 1: Test photo analysis with dummy base64 image data
+        # Create a small dummy base64 image (1x1 pixel PNG)
+        dummy_image_base64 = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChAI9jU8qAAAAAElFTkSuQmCC"
+        
+        analysis_data = {
+            "image_base64": dummy_image_base64,
+            "analysis_type": "body_composition",
+            "previous_photos": []
+        }
+        
+        analysis_response = self.make_request("POST", "/photos/analyze", analysis_data)
+        
+        if analysis_response is None:
+            self.log_result("AI Photo Analysis", False, "Request failed")
+            return False
+        
+        # Handle both success and OpenAI API key scenarios
+        if analysis_response.status_code == 200:
+            try:
+                analysis_result = analysis_response.json()
+                
+                required_fields = ["message", "analysis_id", "ai_analysis"]
+                if all(field in analysis_result for field in required_fields):
+                    analysis_id = analysis_result["analysis_id"]
+                    ai_analysis = analysis_result["ai_analysis"]
+                    
+                    if isinstance(ai_analysis, dict):
+                        self.log_result("AI Photo Analysis", True, "Photo analysis completed successfully with AI")
+                        
+                        # Validate AI analysis structure
+                        if "body_composition" in ai_analysis or "analysis" in ai_analysis:
+                            self.log_result("AI Analysis Structure", True, "AI analysis contains body composition data")
+                        
+                        if "recommendations" in analysis_result:
+                            recommendations = analysis_result["recommendations"]
+                            if isinstance(recommendations, list):
+                                self.log_result("AI Recommendations", True, f"Generated {len(recommendations)} AI recommendations")
+                    else:
+                        self.log_result("AI Photo Analysis", False, "Invalid AI analysis structure", str(ai_analysis))
+                        return False
+                else:
+                    missing_fields = [field for field in required_fields if field not in analysis_result]
+                    self.log_result("AI Photo Analysis", False, f"Response missing required fields: {missing_fields}")
+                    return False
+                    
+            except json.JSONDecodeError:
+                self.log_result("AI Photo Analysis", False, "Invalid JSON response", analysis_response.text)
+                return False
+        
+        elif analysis_response.status_code == 500:
+            try:
+                error_data = analysis_response.json()
+                if "OpenAI API key not configured" in error_data.get("detail", ""):
+                    self.log_result("AI Photo Analysis", True, "Correctly handles missing OpenAI API key")
+                else:
+                    self.log_result("AI Photo Analysis", False, f"Unexpected error: {error_data.get('detail', 'Unknown error')}")
+                    return False
+            except json.JSONDecodeError:
+                self.log_result("AI Photo Analysis", False, "Invalid JSON error response", analysis_response.text)
+                return False
+        else:
+            self.log_result("AI Photo Analysis", False, f"HTTP {analysis_response.status_code}", analysis_response.text)
+            return False
+        
+        # Step 2: Test photo analysis history retrieval
+        history_response = self.make_request("GET", "/photos/analysis-history")
+        
+        if history_response is None:
+            self.log_result("Photo Analysis History", False, "Request failed")
+            return False
+        
+        if history_response.status_code == 200:
+            try:
+                history_data = history_response.json()
+                
+                if "analyses" in history_data and "total_count" in history_data:
+                    analyses = history_data["analyses"]
+                    total_count = history_data["total_count"]
+                    
+                    if isinstance(analyses, list) and isinstance(total_count, int):
+                        self.log_result("Photo Analysis History", True, f"Retrieved {total_count} photo analysis records")
+                        
+                        # Validate history structure if records exist
+                        if total_count > 0 and len(analyses) > 0:
+                            first_analysis = analyses[0]
+                            history_fields = ["id", "analysis_type", "created_at"]
+                            if all(field in first_analysis for field in history_fields):
+                                self.log_result("History Structure", True, "Analysis history contains required fields")
+                            else:
+                                missing_fields = [field for field in history_fields if field not in first_analysis]
+                                self.log_result("Photo Analysis History", False, f"History record missing fields: {missing_fields}")
+                    else:
+                        self.log_result("Photo Analysis History", False, f"Invalid history data types - analyses: {type(analyses)}, total: {type(total_count)}")
+                        return False
+                else:
+                    self.log_result("Photo Analysis History", False, "History response missing required fields", str(history_data))
+                    return False
+                    
+            except json.JSONDecodeError:
+                self.log_result("Photo Analysis History", False, "Invalid JSON response", history_response.text)
+                return False
+        else:
+            self.log_result("Photo Analysis History", False, f"HTTP {history_response.status_code}", history_response.text)
+            return False
+        
+        self.log_result("FASE 3: AI Photo Analysis", True, "AI Photo Analysis system tested successfully")
+        return True
+
+    def test_fase3_food_recognition(self):
+        """Test FASE 3: Food Recognition by Image endpoints"""
+        if not self.auth_token:
+            self.log_result("FASE 3: Food Recognition", False, "No auth token available")
+            return False
+        
+        print("\n🍽️ Testing FASE 3: Food Recognition by Image")
+        print("=" * 50)
+        
+        # Step 1: Test food recognition with dummy base64 image data
+        dummy_image_base64 = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChAI9jU8qAAAAAElFTkSuQmCC"
+        
+        recognition_data = {
+            "image_base64": dummy_image_base64,
+            "meal_type": "lunch"
+        }
+        
+        recognition_response = self.make_request("POST", "/foods/recognize", recognition_data)
+        
+        if recognition_response is None:
+            self.log_result("Food Recognition", False, "Request failed")
+            return False
+        
+        # Handle both success and OpenAI API key scenarios
+        if recognition_response.status_code == 200:
+            try:
+                recognition_result = recognition_response.json()
+                
+                required_fields = ["message", "recognition_id", "recognized_foods", "nutritional_info", "total_calories"]
+                if all(field in recognition_result for field in required_fields):
+                    recognition_id = recognition_result["recognition_id"]
+                    recognized_foods = recognition_result["recognized_foods"]
+                    nutritional_info = recognition_result["nutritional_info"]
+                    total_calories = recognition_result["total_calories"]
+                    
+                    if isinstance(recognized_foods, list) and isinstance(nutritional_info, dict):
+                        self.log_result("Food Recognition", True, f"Recognized {len(recognized_foods)} food items with {total_calories} total calories")
+                        
+                        # Validate nutritional info structure
+                        if "protein" in nutritional_info and "carbs" in nutritional_info and "fat" in nutritional_info:
+                            self.log_result("Nutritional Analysis", True, "Food recognition includes complete nutritional breakdown")
+                        
+                        if "suggestions" in recognition_result:
+                            suggestions = recognition_result["suggestions"]
+                            if isinstance(suggestions, list):
+                                self.log_result("AI Suggestions", True, f"Generated {len(suggestions)} food suggestions")
+                    else:
+                        self.log_result("Food Recognition", False, f"Invalid recognition data types - foods: {type(recognized_foods)}, nutrition: {type(nutritional_info)}")
+                        return False
+                else:
+                    missing_fields = [field for field in required_fields if field not in recognition_result]
+                    self.log_result("Food Recognition", False, f"Response missing required fields: {missing_fields}")
+                    return False
+                    
+            except json.JSONDecodeError:
+                self.log_result("Food Recognition", False, "Invalid JSON response", recognition_response.text)
+                return False
+        
+        elif recognition_response.status_code == 500:
+            try:
+                error_data = recognition_response.json()
+                if "OpenAI API key not configured" in error_data.get("detail", ""):
+                    self.log_result("Food Recognition", True, "Correctly handles missing OpenAI API key")
+                else:
+                    self.log_result("Food Recognition", False, f"Unexpected error: {error_data.get('detail', 'Unknown error')}")
+                    return False
+            except json.JSONDecodeError:
+                self.log_result("Food Recognition", False, "Invalid JSON error response", recognition_response.text)
+                return False
+        else:
+            self.log_result("Food Recognition", False, f"HTTP {recognition_response.status_code}", recognition_response.text)
+            return False
+        
+        # Step 2: Test food recognition history retrieval
+        history_response = self.make_request("GET", "/foods/recognition-history")
+        
+        if history_response is None:
+            self.log_result("Food Recognition History", False, "Request failed")
+            return False
+        
+        if history_response.status_code == 200:
+            try:
+                history_data = history_response.json()
+                
+                if "recognitions" in history_data and "total_count" in history_data:
+                    recognitions = history_data["recognitions"]
+                    total_count = history_data["total_count"]
+                    
+                    if isinstance(recognitions, list) and isinstance(total_count, int):
+                        self.log_result("Food Recognition History", True, f"Retrieved {total_count} food recognition records")
+                        
+                        # Validate history structure if records exist
+                        if total_count > 0 and len(recognitions) > 0:
+                            first_recognition = recognitions[0]
+                            history_fields = ["id", "meal_type", "total_calories", "created_at"]
+                            if all(field in first_recognition for field in history_fields):
+                                self.log_result("Recognition History Structure", True, "Recognition history contains required fields")
+                            else:
+                                missing_fields = [field for field in history_fields if field not in first_recognition]
+                                self.log_result("Food Recognition History", False, f"History record missing fields: {missing_fields}")
+                    else:
+                        self.log_result("Food Recognition History", False, f"Invalid history data types - recognitions: {type(recognitions)}, total: {type(total_count)}")
+                        return False
+                else:
+                    self.log_result("Food Recognition History", False, "History response missing required fields", str(history_data))
+                    return False
+                    
+            except json.JSONDecodeError:
+                self.log_result("Food Recognition History", False, "Invalid JSON response", history_response.text)
+                return False
+        else:
+            self.log_result("Food Recognition History", False, f"HTTP {history_response.status_code}", history_response.text)
+            return False
+        
+        self.log_result("FASE 3: Food Recognition", True, "Food Recognition system tested successfully")
+        return True
+
+    def test_fase3_advanced_analytics(self):
+        """Test FASE 3: Advanced Analytics endpoints"""
+        if not self.auth_token:
+            self.log_result("FASE 3: Advanced Analytics", False, "No auth token available")
+            return False
+        
+        print("\n📊 Testing FASE 3: Advanced Analytics")
+        print("=" * 50)
+        
+        # Test different periods
+        periods = ["week", "month", "quarter", "year"]
+        
+        for period in periods:
+            analytics_response = self.make_request("GET", f"/analytics/advanced-progress?period={period}")
+            
+            if analytics_response is None:
+                self.log_result(f"Advanced Analytics ({period})", False, "Request failed")
+                continue
+            
+            if analytics_response.status_code == 200:
+                try:
+                    analytics_data = analytics_response.json()
+                    
+                    required_fields = ["user_id", "period", "weight_trend", "body_composition_trend", 
+                                     "measurement_trends", "activity_patterns", "nutrition_patterns", 
+                                     "goal_progress", "predictions"]
+                    
+                    if all(field in analytics_data for field in required_fields):
+                        self.log_result(f"Advanced Analytics ({period})", True, f"Analytics data generated for {period} period")
+                        
+                        # Validate specific trend data
+                        weight_trend = analytics_data["weight_trend"]
+                        if isinstance(weight_trend, dict) and "data_points" in weight_trend:
+                            self.log_result(f"Weight Trend ({period})", True, f"Weight trend contains {len(weight_trend['data_points'])} data points")
+                        
+                        # Validate predictions
+                        predictions = analytics_data["predictions"]
+                        if isinstance(predictions, dict):
+                            prediction_fields = ["weight_prediction", "goal_achievement", "trend_analysis"]
+                            present_predictions = sum(1 for field in prediction_fields if field in predictions)
+                            if present_predictions >= 2:
+                                self.log_result(f"Predictive Analytics ({period})", True, f"Contains {present_predictions}/{len(prediction_fields)} prediction types")
+                        
+                        # Validate activity patterns
+                        activity_patterns = analytics_data["activity_patterns"]
+                        if isinstance(activity_patterns, dict) and "workout_frequency" in activity_patterns:
+                            self.log_result(f"Activity Patterns ({period})", True, "Activity pattern analysis included")
+                        
+                        # Validate achievements and risk factors
+                        if "achievements" in analytics_data:
+                            achievements = analytics_data["achievements"]
+                            if isinstance(achievements, list):
+                                self.log_result(f"Achievements ({period})", True, f"Identified {len(achievements)} achievements")
+                        
+                        if "risk_factors" in analytics_data:
+                            risk_factors = analytics_data["risk_factors"]
+                            if isinstance(risk_factors, list):
+                                self.log_result(f"Risk Assessment ({period})", True, f"Identified {len(risk_factors)} risk factors")
+                        
+                    else:
+                        missing_fields = [field for field in required_fields if field not in analytics_data]
+                        self.log_result(f"Advanced Analytics ({period})", False, f"Response missing required fields: {missing_fields}")
+                        return False
+                        
+                except json.JSONDecodeError:
+                    self.log_result(f"Advanced Analytics ({period})", False, "Invalid JSON response", analytics_response.text)
+                    return False
+            else:
+                self.log_result(f"Advanced Analytics ({period})", False, f"HTTP {analytics_response.status_code}", analytics_response.text)
+                return False
+        
+        self.log_result("FASE 3: Advanced Analytics", True, "Advanced Analytics system tested successfully")
+        return True
+
+    def test_fase3_pattern_detection(self):
+        """Test FASE 3: Pattern Detection and Alerts endpoints"""
+        if not self.auth_token:
+            self.log_result("FASE 3: Pattern Detection", False, "No auth token available")
+            return False
+        
+        print("\n🔍 Testing FASE 3: Pattern Detection and Alerts")
+        print("=" * 50)
+        
+        # Step 1: Test abandonment pattern detection
+        abandonment_response = self.make_request("GET", "/patterns/detect-abandonment")
+        
+        if abandonment_response is None:
+            self.log_result("Abandonment Pattern Detection", False, "Request failed")
+            return False
+        
+        if abandonment_response.status_code == 200:
+            try:
+                abandonment_data = abandonment_response.json()
+                
+                required_fields = ["abandonment_risk", "patterns_detected", "recommendations", "activity_analysis"]
+                if all(field in abandonment_data for field in required_fields):
+                    abandonment_risk = abandonment_data["abandonment_risk"]
+                    patterns_detected = abandonment_data["patterns_detected"]
+                    recommendations = abandonment_data["recommendations"]
+                    
+                    if isinstance(abandonment_risk, dict) and "risk_level" in abandonment_risk:
+                        risk_level = abandonment_risk["risk_level"]
+                        self.log_result("Abandonment Pattern Detection", True, f"Detected abandonment risk level: {risk_level}")
+                        
+                        # Validate risk score
+                        if "risk_score" in abandonment_risk:
+                            risk_score = abandonment_risk["risk_score"]
+                            if isinstance(risk_score, (int, float)) and 0 <= risk_score <= 100:
+                                self.log_result("Risk Score Calculation", True, f"Risk score calculated: {risk_score}/100")
+                    
+                    if isinstance(patterns_detected, list):
+                        self.log_result("Pattern Analysis", True, f"Detected {len(patterns_detected)} behavioral patterns")
+                    
+                    if isinstance(recommendations, list):
+                        self.log_result("Pattern Recommendations", True, f"Generated {len(recommendations)} recommendations")
+                    
+                    # Validate activity analysis
+                    activity_analysis = abandonment_data["activity_analysis"]
+                    if isinstance(activity_analysis, dict):
+                        analysis_fields = ["recent_activity", "engagement_trends", "last_activity"]
+                        present_fields = sum(1 for field in analysis_fields if field in activity_analysis)
+                        if present_fields >= 2:
+                            self.log_result("Activity Analysis", True, f"Activity analysis contains {present_fields}/{len(analysis_fields)} metrics")
+                else:
+                    missing_fields = [field for field in required_fields if field not in abandonment_data]
+                    self.log_result("Abandonment Pattern Detection", False, f"Response missing required fields: {missing_fields}")
+                    return False
+                    
+            except json.JSONDecodeError:
+                self.log_result("Abandonment Pattern Detection", False, "Invalid JSON response", abandonment_response.text)
+                return False
+        else:
+            self.log_result("Abandonment Pattern Detection", False, f"HTTP {abandonment_response.status_code}", abandonment_response.text)
+            return False
+        
+        # Step 2: Test pattern alerts retrieval
+        alerts_response = self.make_request("GET", "/patterns/alerts")
+        
+        if alerts_response is None:
+            self.log_result("Pattern Alerts", False, "Request failed")
+            return False
+        
+        if alerts_response.status_code == 200:
+            try:
+                alerts_data = alerts_response.json()
+                
+                if "alerts" in alerts_data and "total_count" in alerts_data:
+                    alerts = alerts_data["alerts"]
+                    total_count = alerts_data["total_count"]
+                    
+                    if isinstance(alerts, list) and isinstance(total_count, int):
+                        self.log_result("Pattern Alerts", True, f"Retrieved {total_count} pattern alerts")
+                        
+                        # Validate alert structure if alerts exist
+                        if total_count > 0 and len(alerts) > 0:
+                            first_alert = alerts[0]
+                            alert_fields = ["id", "alert_type", "severity", "title", "description", "is_active"]
+                            if all(field in first_alert for field in alert_fields):
+                                self.log_result("Alert Structure", True, "Pattern alerts contain required fields")
+                                
+                                # Store alert ID for resolution testing
+                                self.test_alert_id = first_alert["id"]
+                                
+                                # Validate severity levels
+                                severity = first_alert["severity"]
+                                if severity in ["low", "medium", "high", "critical"]:
+                                    self.log_result("Alert Severity", True, f"Alert severity properly categorized: {severity}")
+                            else:
+                                missing_fields = [field for field in alert_fields if field not in first_alert]
+                                self.log_result("Pattern Alerts", False, f"Alert missing fields: {missing_fields}")
+                                return False
+                    else:
+                        self.log_result("Pattern Alerts", False, f"Invalid alerts data types - alerts: {type(alerts)}, total: {type(total_count)}")
+                        return False
+                else:
+                    self.log_result("Pattern Alerts", False, "Alerts response missing required fields", str(alerts_data))
+                    return False
+                    
+            except json.JSONDecodeError:
+                self.log_result("Pattern Alerts", False, "Invalid JSON response", alerts_response.text)
+                return False
+        else:
+            self.log_result("Pattern Alerts", False, f"HTTP {alerts_response.status_code}", alerts_response.text)
+            return False
+        
+        # Step 3: Test alert resolution (if we have an alert to resolve)
+        if hasattr(self, 'test_alert_id') and self.test_alert_id:
+            resolve_response = self.make_request("PUT", f"/patterns/alerts/{self.test_alert_id}/resolve")
+            
+            if resolve_response is None:
+                self.log_result("Alert Resolution", False, "Request failed")
+                return False
+            
+            if resolve_response.status_code == 200:
+                try:
+                    resolve_data = resolve_response.json()
+                    
+                    if "message" in resolve_data:
+                        self.log_result("Alert Resolution", True, "Pattern alert resolved successfully")
+                        
+                        # Verify the alert was actually resolved by checking its status
+                        if "alert" in resolve_data:
+                            resolved_alert = resolve_data["alert"]
+                            if isinstance(resolved_alert, dict) and "resolved_at" in resolved_alert:
+                                self.log_result("Resolution Verification", True, "Alert resolution timestamp recorded")
+                    else:
+                        self.log_result("Alert Resolution", False, "Resolution response missing message", str(resolve_data))
+                        return False
+                        
+                except json.JSONDecodeError:
+                    self.log_result("Alert Resolution", False, "Invalid JSON response", resolve_response.text)
+                    return False
+            else:
+                self.log_result("Alert Resolution", False, f"HTTP {resolve_response.status_code}", resolve_response.text)
+                return False
+        else:
+            self.log_result("Alert Resolution", True, "No active alerts to resolve (expected for new user)")
+        
+        self.log_result("FASE 3: Pattern Detection", True, "Pattern Detection and Alerts system tested successfully")
+        return True
+
     def test_openai_integration_scenarios(self):
         """Test OpenAI integration scenarios - with and without API key"""
         if not self.auth_token:
