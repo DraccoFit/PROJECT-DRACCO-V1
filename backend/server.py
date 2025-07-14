@@ -645,10 +645,17 @@ def generate_supplement_recommendations(user_evaluation: dict, health_metrics: d
     """Generate personalized supplement recommendations"""
     recommendations = []
     
-    goal = user_evaluation.get("goal", "")
-    age = user_evaluation.get("age", 25)
-    gender = user_evaluation.get("gender", "")
-    activity_level = user_evaluation.get("activity_level", "")
+    # Handle both dict and Pydantic model
+    if hasattr(user_evaluation, 'goal'):
+        goal = user_evaluation.goal
+        age = user_evaluation.age
+        gender = user_evaluation.gender
+        activity_level = user_evaluation.activity_level
+    else:
+        goal = user_evaluation.get("goal", "")
+        age = user_evaluation.get("age", 25)
+        gender = user_evaluation.get("gender", "")
+        activity_level = user_evaluation.get("activity_level", "")
     
     # Basic recommendations for everyone
     basic_supplements = [
