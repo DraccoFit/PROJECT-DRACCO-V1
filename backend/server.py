@@ -338,6 +338,180 @@ async def generate_ai_response(user_message: str, user_context: dict) -> str:
     except Exception as e:
         return f"Error al generar respuesta: {str(e)}"
 
+async def generate_nutrition_plan_ai(user_evaluation: dict, daily_calories: float) -> dict:
+    """Generate AI-powered nutrition plan"""
+    if not OPENAI_API_KEY:
+        return {"error": "OpenAI API key not configured"}
+    
+    try:
+        # Create detailed prompt for nutrition plan generation
+        prompt = f"""
+        Genera un plan nutricional semanal detallado para un usuario con las siguientes características:
+        
+        DATOS DEL USUARIO:
+        - Edad: {user_evaluation.get('age', 'No especificado')} años
+        - Género: {user_evaluation.get('gender', 'No especificado')}
+        - Peso: {user_evaluation.get('weight', 'No especificado')} kg
+        - Altura: {user_evaluation.get('height', 'No especificado')} cm
+        - Nivel de actividad: {user_evaluation.get('activity_level', 'No especificado')}
+        - Objetivo: {user_evaluation.get('goal', 'No especificado')}
+        - Calorías diarias: {daily_calories} kcal
+        - Preferencias alimentarias: {user_evaluation.get('food_preferences', [])}
+        - Alergias: {user_evaluation.get('food_allergies', [])}
+        - Condiciones de salud: {user_evaluation.get('health_conditions', [])}
+        
+        INSTRUCCIONES:
+        1. Crea un plan para 7 días (Lunes a Domingo)
+        2. Incluye 4 comidas por día: Desayuno, Almuerzo, Merienda, Cena
+        3. Cada comida debe tener: nombre, ingredientes, calorías aproximadas, proteínas, carbohidratos, grasas
+        4. Respeta las preferencias alimentarias y alergias
+        5. Ajusta las porciones según el objetivo (perder, mantener o ganar peso)
+        6. Incluye consejos nutricionales específicos
+        
+        FORMATO DE RESPUESTA (JSON):
+        {{
+            "plan_name": "Plan Nutricional Personalizado",
+            "total_calories": {daily_calories},
+            "duration": "7 días",
+            "days": {{
+                "Lunes": {{
+                    "Desayuno": {{
+                        "name": "Nombre del platillo",
+                        "ingredients": ["ingrediente1", "ingrediente2"],
+                        "calories": 450,
+                        "protein": 20,
+                        "carbs": 50,
+                        "fat": 15,
+                        "instructions": "Instrucciones de preparación"
+                    }},
+                    "Almuerzo": {{ ... }},
+                    "Merienda": {{ ... }},
+                    "Cena": {{ ... }}
+                }},
+                "Martes": {{ ... }},
+                ... (continúa para todos los días)
+            }},
+            "tips": [
+                "Consejo nutricional 1",
+                "Consejo nutricional 2",
+                "Consejo nutricional 3"
+            ],
+            "shopping_list": [
+                "Producto 1",
+                "Producto 2",
+                "Producto 3"
+            ]
+        }}
+        
+        Responde SOLO con el JSON válido, sin explicaciones adicionales.
+        """
+        
+        response = openai.chat.completions.create(
+            model="gpt-4",
+            messages=[
+                {"role": "system", "content": "Eres un nutricionista experto que crea planes alimentarios personalizados. Responde siempre en formato JSON válido."},
+                {"role": "user", "content": prompt}
+            ],
+            max_tokens=3000,
+            temperature=0.3
+        )
+        
+        # Parse the JSON response
+        ai_response = response.choices[0].message.content
+        
+        # Clean the response (remove any markdown formatting)
+        ai_response = ai_response.strip()
+        if ai_response.startswith('```json'):
+            ai_response = ai_response[7:]
+        if ai_response.endswith('```'):
+            ai_response = ai_response[:-3]
+        
+        nutrition_plan = json.loads(ai_response)
+        return nutrition_plan
+        
+    except json.JSONDecodeError as e:
+        return {"error": f"Error parsing AI response: {str(e)}"}
+    except Exception as e:
+        return {"error": f"Error generating nutrition plan: {str(e)}"}
+
+async def generate_meal_alternatives(original_meal: dict, user_preferences: list, allergies: list) -> list:
+    """Generate alternative meals based on user preferences and allergies"""
+    if not OPENAI_API_KEY:
+        return []
+    
+    try:
+        prompt = f"""
+        Genera 3 alternativas para esta comida:
+        
+        COMIDA ORIGINAL:
+        - Nombre: {original_meal.get('name', '')}
+        - Ingredientes: {original_meal.get('ingredients', [])}
+        - Calorías: {original_meal.get('calories', 0)}
+        - Proteínas: {original_meal.get('protein', 0)}g
+        - Carbohidratos: {original_meal.get('carbs', 0)}g
+        - Grasas: {original_meal.get('fat', 0)}g
+        
+        RESTRICCIONES:
+        - Preferencias: {user_preferences}
+        - Alergias: {allergies}
+        - Mantener valores nutricionales similares (±10%)
+        
+        FORMATO JSON:
+        {{
+            "alternatives": [
+                {{
+                    "name": "Nombre alternativo 1",
+                    "ingredients": ["ingrediente1", "ingrediente2"],
+                    "calories": 450,
+                    "protein": 20,
+                    "carbs": 50,
+                    "fat": 15,
+                    "instructions": "Instrucciones breves"
+                }},
+                {{
+                    "name": "Nombre alternativo 2",
+                    "ingredients": ["ingrediente1", "ingrediente2"],
+                    "calories": 460,
+                    "protein": 22,
+                    "carbs": 48,
+                    "fat": 16,
+                    "instructions": "Instrucciones breves"
+                }},
+                {{
+                    "name": "Nombre alternativo 3",
+                    "ingredients": ["ingrediente1", "ingrediente2"],
+                    "calories": 440,
+                    "protein": 19,
+                    "carbs": 52,
+                    "fat": 14,
+                    "instructions": "Instrucciones breves"
+                }}
+            ]
+        }}
+        """
+        
+        response = openai.chat.completions.create(
+            model="gpt-4",
+            messages=[
+                {"role": "system", "content": "Eres un chef nutricionista que crea alternativas de comidas saludables. Responde solo en JSON válido."},
+                {"role": "user", "content": prompt}
+            ],
+            max_tokens=1000,
+            temperature=0.5
+        )
+        
+        ai_response = response.choices[0].message.content.strip()
+        if ai_response.startswith('```json'):
+            ai_response = ai_response[7:]
+        if ai_response.endswith('```'):
+            ai_response = ai_response[:-3]
+        
+        alternatives = json.loads(ai_response)
+        return alternatives.get('alternatives', [])
+        
+    except Exception as e:
+        return []
+
 # API Routes
 
 # Authentication
