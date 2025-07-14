@@ -968,12 +968,22 @@ const MainApp = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-200">
+    <div className="min-h-screen bg-gradient-to-br from-primary-50 via-white to-secondary-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 transition-all duration-300">
+      {/* Background Pattern */}
+      <div className="fixed inset-0 opacity-10 dark:opacity-5">
+        <div className="absolute top-0 left-0 w-full h-full" style={{
+          backgroundImage: `radial-gradient(circle at 25% 25%, rgba(102, 126, 234, 0.1) 0%, transparent 50%), 
+                           radial-gradient(circle at 75% 75%, rgba(231, 121, 249, 0.1) 0%, transparent 50%)`
+        }}></div>
+      </div>
+      
       <Navbar />
-      <div className="flex">
+      <div className="flex relative">
         <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} />
-        <main className="flex-1 p-6">
-          {renderContent()}
+        <main className="flex-1 p-6 lg:p-8 min-h-screen">
+          <div className="max-w-7xl mx-auto">
+            {renderContent()}
+          </div>
         </main>
       </div>
     </div>
