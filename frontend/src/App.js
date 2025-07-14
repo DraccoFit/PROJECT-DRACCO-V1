@@ -833,7 +833,7 @@ const AuthPage = () => {
         <div className="max-w-md w-full space-y-8">
           <div className="text-center animate-fade-in">
             <div className="mx-auto h-16 w-16 bg-gradient-to-br from-primary-500 to-secondary-500 rounded-2xl flex items-center justify-center text-3xl text-white shadow-neon animate-pulse-glow">
-              💪
+              🐉
             </div>
             <h2 className="mt-6 text-center text-4xl font-bold gradient-text">
               {isLogin ? 'Bienvenido a DRACCO' : 'Únete a DRACCO'}
