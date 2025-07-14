@@ -194,6 +194,66 @@ class Food(BaseModel):
     sodium: float
     category: str
     image_url: Optional[str] = None
+    # Advanced nutritional data
+    saturated_fat: float = 0.0
+    trans_fat: float = 0.0
+    cholesterol: float = 0.0
+    potassium: float = 0.0
+    calcium: float = 0.0
+    iron: float = 0.0
+    vitamin_c: float = 0.0
+    vitamin_a: float = 0.0
+    vitamin_d: float = 0.0
+    vitamin_b12: float = 0.0
+    folate: float = 0.0
+    magnesium: float = 0.0
+    phosphorus: float = 0.0
+    zinc: float = 0.0
+    # Additional metadata
+    glycemic_index: Optional[int] = None
+    allergens: List[str] = []
+    dietary_flags: List[str] = []  # vegetarian, vegan, gluten-free, etc.
+    serving_size: float = 100.0  # grams
+    barcode: Optional[str] = None
+    brand: Optional[str] = None
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+
+class FoodComparison(BaseModel):
+    foods: List[str]  # List of food IDs
+    comparison_type: str = "nutritional"  # nutritional, caloric, protein, etc.
+    serving_size: float = 100.0  # grams
+
+class NutritionLabel(BaseModel):
+    food_id: str
+    serving_size: float
+    nutritional_data: Dict[str, Any]
+    health_score: float
+    recommendations: List[str]
+
+class Supplement(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    name: str
+    category: str  # protein, vitamins, minerals, etc.
+    description: str
+    benefits: List[str]
+    dosage: str
+    timing: str  # pre-workout, post-workout, with meals, etc.
+    side_effects: List[str] = []
+    contraindications: List[str] = []
+    price_range: Optional[Dict[str, float]] = None  # {"min": 20, "max": 50}
+    rating: float = 0.0
+    image_url: Optional[str] = None
+    suitable_for: List[str] = []  # goals, conditions, etc.
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+
+class SupplementRecommendation(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    user_id: str
+    supplement_id: str
+    reason: str
+    priority: int  # 1-5, higher is more important
+    confidence: float  # 0-1
+    created_at: datetime = Field(default_factory=datetime.utcnow)
 
 class Meal(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
