@@ -140,7 +140,46 @@ class Exercise(BaseModel):
     duration_minutes: int
     calories_burned: int
     video_url: Optional[str] = None
+    video_thumbnail: Optional[str] = None
     image_url: Optional[str] = None
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    # Advanced fields
+    secondary_muscles: List[str] = []
+    preparation_steps: List[str] = []
+    common_mistakes: List[str] = []
+    variations: List[str] = []
+    safety_tips: List[str] = []
+    progression_tips: List[str] = []
+    breathing_pattern: str = ""
+    rest_between_sets: int = 60  # seconds
+    intensity_level: int = 5  # 1-10 scale
+    tags: List[str] = []
+    created_by: str = "system"
+    rating: float = 0.0
+    review_count: int = 0
+
+class ExerciseFilter(BaseModel):
+    name: Optional[str] = None
+    type: Optional[ExerciseType] = None
+    difficulty: Optional[DifficultyLevel] = None
+    muscle_groups: Optional[List[str]] = None
+    equipment: Optional[List[str]] = None
+    duration_range: Optional[Dict[str, int]] = None  # {"min": 10, "max": 60}
+    calories_range: Optional[Dict[str, int]] = None
+    intensity_range: Optional[Dict[str, int]] = None
+    tags: Optional[List[str]] = None
+    has_video: Optional[bool] = None
+    sort_by: Optional[str] = "name"  # name, difficulty, calories, rating, created_at
+    sort_order: Optional[str] = "asc"  # asc, desc
+    limit: Optional[int] = 50
+    offset: Optional[int] = 0
+
+class ExerciseReview(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    exercise_id: str
+    user_id: str
+    rating: int  # 1-5 stars
+    comment: Optional[str] = None
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
 class Food(BaseModel):
