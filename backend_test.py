@@ -582,7 +582,53 @@ class FitnessAppTester:
             self.log_result("Workout Plans", False, f"HTTP {response.status_code}", response.text)
             return False
     
-    def run_all_tests(self):
+    def test_openai_integration_scenarios(self):
+        """Test OpenAI integration scenarios - with and without API key"""
+        if not self.auth_token:
+            self.log_result("OpenAI Integration", False, "No auth token available")
+            return False
+        
+        print("\n🤖 Testing OpenAI Integration Scenarios")
+        print("=" * 50)
+        
+        # Test 1: AI Chatbot endpoint
+        chat_response = self.make_request("POST", "/chat", {"message": "¿Qué ejercicios me recomiendas para principiantes?"})
+        
+        if chat_response and chat_response.status_code == 200:
+            try:
+                chat_data = chat_response.json()
+                if "response" in chat_data:
+                    response_text = chat_data["response"]
+                    if "AI chatbot no disponible" in response_text or "OpenAI" in response_text:
+                        self.log_result("AI Chatbot (No API Key)", True, "Correctly handles missing OpenAI API key")
+                    else:
+                        self.log_result("AI Chatbot (With API Key)", True, "AI chatbot working with API key")
+                else:
+                    self.log_result("AI Chatbot", False, "Missing response field", str(chat_data))
+            except json.JSONDecodeError:
+                self.log_result("AI Chatbot", False, "Invalid JSON response", chat_response.text)
+        else:
+            error_msg = chat_response.text if chat_response else "Request failed"
+            status_code = chat_response.status_code if chat_response else "None"
+            self.log_result("AI Chatbot", False, f"Chat request failed: HTTP {status_code}", error_msg)
+        
+        # Test 2: Nutrition plan generation (already tested in main function)
+        gen_response = self.make_request("POST", "/nutrition-plans/generate")
+        
+        if gen_response:
+            if gen_response.status_code == 200:
+                self.log_result("AI Nutrition Generation (With API Key)", True, "AI nutrition plan generation working")
+            elif gen_response.status_code == 500:
+                try:
+                    error_data = gen_response.json()
+                    if "OpenAI API key not configured" in error_data.get("detail", ""):
+                        self.log_result("AI Nutrition Generation (No API Key)", True, "Correctly handles missing OpenAI API key")
+                    else:
+                        self.log_result("AI Nutrition Generation", False, f"Unexpected error: {error_data.get('detail', 'Unknown')}")
+                except json.JSONDecodeError:
+                    self.log_result("AI Nutrition Generation", False, "Invalid error response", gen_response.text)
+        
+        return True
         """Run all backend tests"""
         print("🚀 Starting Fitness App Backend API Tests")
         print(f"Testing against: {self.base_url}")
