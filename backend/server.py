@@ -1741,7 +1741,7 @@ async def generate_workout_plan(current_user: User = Depends(get_current_user)):
                 name=workout_data.get("name", f"Entrenamiento {day}"),
                 exercises=workout_data.get("exercises", []),
                 total_duration=workout_data.get("duration", 60),
-                difficulty=DifficultyLevel(current_user.evaluation.get("experience_level", "beginner")),
+                difficulty=DifficultyLevel(current_user.evaluation.experience_level if current_user.evaluation else "beginner"),
                 focus_areas=workout_data.get("focus_areas", [])
             )
             sessions_by_day[day] = workout_session
