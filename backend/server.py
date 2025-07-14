@@ -3312,5 +3312,259 @@ def generate_achievements(progress_entries):
     
     return achievements
 
+def generate_achievements(progress_entries):
+    """Generate achievements based on progress"""
+    achievements = []
+    
+    if len(progress_entries) >= 7:
+        achievements.append("Seguimiento consistente por 7 días")
+    
+    if len(progress_entries) >= 30:
+        achievements.append("¡Un mes de seguimiento!")
+    
+    return achievements
+
+def build_exercise_query(filters):
+    """Build MongoDB query for exercise filtering"""
+    query = {}
+    
+    if filters.name:
+        query["name"] = {"$regex": filters.name, "$options": "i"}
+    
+    if filters.type:
+        query["type"] = filters.type
+    
+    if filters.difficulty:
+        query["difficulty"] = filters.difficulty
+    
+    if filters.muscle_group:
+        query["muscle_groups"] = {"$in": [filters.muscle_group]}
+    
+    if filters.equipment:
+        query["equipment"] = {"$in": [filters.equipment]}
+    
+    if filters.min_duration:
+        query["duration_minutes"] = {"$gte": filters.min_duration}
+    
+    if filters.max_duration:
+        query["duration_minutes"] = {"$lte": filters.max_duration}
+    
+    if filters.min_calories:
+        query["calories_burned"] = {"$gte": filters.min_calories}
+    
+    if filters.max_calories:
+        query["calories_burned"] = {"$lte": filters.max_calories}
+    
+    return query
+
+def calculate_food_health_score(food):
+    """Calculate health score for a food item"""
+    score = 50  # Base score
+    
+    # Positive factors
+    if food.get("protein", 0) >= 10:
+        score += 15
+    if food.get("fiber", 0) >= 5:
+        score += 10
+    if food.get("vitamin_c", 0) >= 10:
+        score += 5
+    if food.get("calcium", 0) >= 100:
+        score += 5
+    
+    # Negative factors
+    if food.get("sugar", 0) >= 20:
+        score -= 15
+    if food.get("sodium", 0) >= 500:
+        score -= 10
+    if food.get("saturated_fat", 0) >= 10:
+        score -= 10
+    
+    return max(0, min(100, score))
+
+def generate_smart_shopping_list(plan, user_preferences):
+    """Generate intelligent shopping list from nutrition plan"""
+    # This is a simplified version - in production would be more sophisticated
+    items = []
+    categories = set()
+    
+    # Basic items based on plan
+    basic_items = [
+        {"name": "Pollo", "category": "Carnes", "quantity": "1 kg", "price": 15.0},
+        {"name": "Arroz integral", "category": "Granos", "quantity": "1 paquete", "price": 8.0},
+        {"name": "Brócoli", "category": "Verduras", "quantity": "500g", "price": 5.0},
+        {"name": "Huevos", "category": "Lácteos", "quantity": "1 docena", "price": 6.0},
+        {"name": "Avena", "category": "Granos", "quantity": "1 paquete", "price": 4.0},
+    ]
+    
+    for item in basic_items:
+        categories.add(item["category"])
+        items.append(item)
+    
+    total_cost = sum(item["price"] for item in items)
+    
+    return {
+        "items": items,
+        "categories": list(categories),
+        "total_items": len(items),
+        "estimated_cost": total_cost
+    }
+
+def generate_supplement_recommendations(user_evaluation, health_metrics):
+    """Generate personalized supplement recommendations"""
+    recommendations = []
+    
+    # Basic recommendations based on user profile
+    if user_evaluation.goal == "build_muscle":
+        recommendations.append({
+            "name": "Proteína en polvo",
+            "reason": "Apoyo para el desarrollo muscular",
+            "priority": "high",
+            "confidence": 0.9
+        })
+    
+    if user_evaluation.goal == "lose_weight":
+        recommendations.append({
+            "name": "Té verde",
+            "reason": "Apoyo para la pérdida de peso",
+            "priority": "medium",
+            "confidence": 0.7
+        })
+    
+    # Age-based recommendations
+    if user_evaluation.age > 30:
+        recommendations.append({
+            "name": "Vitamina D",
+            "reason": "Importante para la salud ósea después de los 30",
+            "priority": "medium",
+            "confidence": 0.8
+        })
+    
+    if user_evaluation.age > 40:
+        recommendations.append({
+            "name": "Omega 3",
+            "reason": "Beneficioso para la salud cardiovascular",
+            "priority": "high",
+            "confidence": 0.9
+        })
+    
+    # Gender-based recommendations
+    if user_evaluation.gender == "female":
+        recommendations.append({
+            "name": "Hierro",
+            "reason": "Importante para mujeres debido a la menstruación",
+            "priority": "medium",
+            "confidence": 0.8
+        })
+    
+    # Activity level recommendations
+    if user_evaluation.activity_level in ["very_active", "extremely_active"]:
+        recommendations.append({
+            "name": "Electrolitos",
+            "reason": "Reposición debido a alta actividad física",
+            "priority": "medium",
+            "confidence": 0.7
+        })
+    
+    return recommendations
+
+def calculate_bmi(weight, height):
+    """Calculate BMI"""
+    height_m = height / 100  # Convert cm to meters
+    return weight / (height_m ** 2)
+
+def get_bmi_category(bmi):
+    """Get BMI category"""
+    if bmi < 18.5:
+        return "Bajo peso"
+    elif bmi < 25:
+        return "Normal"
+    elif bmi < 30:
+        return "Sobrepeso"
+    else:
+        return "Obesidad"
+
+def calculate_body_fat_percentage(gender, age, bmi):
+    """Calculate body fat percentage using BMI method"""
+    if gender == "male":
+        return (1.20 * bmi) + (0.23 * age) - 16.2
+    else:  # female
+        return (1.20 * bmi) + (0.23 * age) - 5.4
+
+def calculate_body_fat_navy(gender, height, neck, waist, hip=None):
+    """Calculate body fat using Navy method"""
+    if gender == "male":
+        return 495 / (1.0324 - 0.19077 * math.log10(waist - neck) + 0.15456 * math.log10(height)) - 450
+    else:  # female
+        if hip:
+            return 495 / (1.29579 - 0.35004 * math.log10(waist + hip - neck) + 0.22100 * math.log10(height)) - 450
+        else:
+            return calculate_body_fat_percentage(gender, 30, calculate_bmi(70, height))  # Fallback
+
+def calculate_ideal_weight(height, gender):
+    """Calculate ideal weight range"""
+    height_m = height / 100
+    
+    # Using BMI 18.5-24.9 for normal range
+    min_weight = 18.5 * (height_m ** 2)
+    max_weight = 24.9 * (height_m ** 2)
+    
+    return {"min": round(min_weight, 1), "max": round(max_weight, 1)}
+
+def calculate_daily_calorie_needs(weight, height, age, gender, activity_level):
+    """Calculate daily calorie needs using Harris-Benedict equation"""
+    # Calculate BMR
+    if gender == "male":
+        bmr = 88.362 + (13.397 * weight) + (4.799 * height) - (5.677 * age)
+    else:  # female
+        bmr = 447.593 + (9.247 * weight) + (3.098 * height) - (4.330 * age)
+    
+    # Activity multipliers
+    activity_multipliers = {
+        "sedentary": 1.2,
+        "lightly_active": 1.375,
+        "moderately_active": 1.55,
+        "very_active": 1.725,
+        "extremely_active": 1.9
+    }
+    
+    multiplier = activity_multipliers.get(activity_level, 1.2)
+    
+    return round(bmr * multiplier, 0)
+
+def generate_health_recommendations(bmi, body_fat, age, gender, goal):
+    """Generate health recommendations based on metrics"""
+    recommendations = []
+    
+    # BMI recommendations
+    if bmi < 18.5:
+        recommendations.append("Considera aumentar tu ingesta calórica de manera saludable")
+    elif bmi > 25:
+        recommendations.append("Considera reducir tu ingesta calórica y aumentar la actividad física")
+    
+    # Body fat recommendations
+    if gender == "male":
+        if body_fat > 25:
+            recommendations.append("Tu porcentaje de grasa corporal está alto, considera ejercicio cardiovascular")
+        elif body_fat < 6:
+            recommendations.append("Tu porcentaje de grasa corporal está muy bajo, consulta con un profesional")
+    else:  # female
+        if body_fat > 32:
+            recommendations.append("Tu porcentaje de grasa corporal está alto, considera ejercicio cardiovascular")
+        elif body_fat < 16:
+            recommendations.append("Tu porcentaje de grasa corporal está muy bajo, consulta con un profesional")
+    
+    # Age-based recommendations
+    if age > 40:
+        recommendations.append("Incluye ejercicios de resistencia para mantener la masa muscular")
+    
+    if age > 50:
+        recommendations.append("Considera suplementos de calcio y vitamina D")
+    
+    # General recommendations
+    recommendations.append("Mantén una hidratación adecuada (8 vasos de agua al día)")
+    recommendations.append("Incluye frutas y verduras en tu dieta diaria")
+    
+    return recommendations
+
 # Include router in main app
 app.include_router(api_router)
