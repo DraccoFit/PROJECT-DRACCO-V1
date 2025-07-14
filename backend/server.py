@@ -248,6 +248,47 @@ class ForumPost(BaseModel):
     replies: List[Dict[str, Any]] = []
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
+class HealthMetrics(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    user_id: str
+    bmi: float
+    body_fat_percentage: Optional[float] = None
+    muscle_mass_percentage: Optional[float] = None
+    visceral_fat_level: Optional[int] = None
+    metabolic_age: Optional[int] = None
+    bone_mass: Optional[float] = None
+    water_percentage: Optional[float] = None
+    calculated_at: datetime = Field(default_factory=datetime.utcnow)
+    bmi_category: str = ""
+    health_status: str = ""
+    recommendations: List[str] = []
+
+class BodyMeasurements(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    user_id: str
+    date: datetime = Field(default_factory=datetime.utcnow)
+    weight: Optional[float] = None
+    height: Optional[float] = None
+    chest: Optional[float] = None
+    waist: Optional[float] = None
+    hips: Optional[float] = None
+    neck: Optional[float] = None
+    bicep: Optional[float] = None
+    thigh: Optional[float] = None
+    forearm: Optional[float] = None
+    calf: Optional[float] = None
+
+class HealthMetricsRequest(BaseModel):
+    weight: float
+    height: float
+    age: int
+    gender: str
+    activity_level: str
+    body_fat_percentage: Optional[float] = None
+    neck_circumference: Optional[float] = None
+    waist_circumference: Optional[float] = None
+    hip_circumference: Optional[float] = None
+
 class Token(BaseModel):
     access_token: str
     token_type: str
