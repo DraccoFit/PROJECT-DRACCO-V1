@@ -342,13 +342,15 @@
 
 ## test_plan:
   current_focus:
+    - "Authentication UI"
     - "Enhanced AI Workout Plans"
     - "Health Metrics Calculator"
     - "Advanced Exercise Library"
     - "Food Comparison Tool"
     - "Smart Shopping List Generator"
     - "Supplement Recommendations"
-  stuck_tasks: []
+  stuck_tasks: 
+    - "Authentication UI"
   test_all: false
   test_priority: "high_first"
 
