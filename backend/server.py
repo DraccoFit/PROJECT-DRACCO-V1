@@ -46,6 +46,8 @@ security = HTTPBearer()
 # OpenAI client
 if OPENAI_API_KEY:
     openai.api_key = OPENAI_API_KEY
+    from openai import OpenAI
+    openai_client = OpenAI(api_key=OPENAI_API_KEY)
 
 # FastAPI app
 app = FastAPI(title="DRACCO API", version="1.0.0")
