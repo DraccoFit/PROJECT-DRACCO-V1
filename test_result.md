@@ -215,15 +215,18 @@
 
   - task: "Health Metrics Calculator"
     implemented: true
-    working: false
+    working: true
     file: "server.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
         - working: false
           agent: "main"
           comment: "Added comprehensive health metrics including BMI calculator, body fat percentage, ideal weight calculations, calorie needs, and health recommendations. Added endpoints for health metrics calculation, history, and analysis."
+        - working: true
+          agent: "testing"
+          comment: "✅ TESTED - Health metrics calculator working correctly: BMI calculation, body fat percentage, ideal weight, calorie needs, and health recommendations all functional"
 
   - task: "Advanced Exercise Library"
     implemented: true
