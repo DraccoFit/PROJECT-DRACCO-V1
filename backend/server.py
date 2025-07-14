@@ -3187,9 +3187,17 @@ async def get_pattern_alerts(current_user: User = Depends(get_current_user)):
             "is_active": True
         }).sort("created_at", -1).to_list(100)
         
+        # Convert alerts to proper format, handling ObjectId
+        formatted_alerts = []
+        for alert in alerts:
+            # Convert ObjectId to string if present
+            if "_id" in alert:
+                del alert["_id"]
+            formatted_alerts.append(alert)
+        
         return {
-            "alerts": alerts,
-            "total_count": len(alerts)
+            "alerts": formatted_alerts,
+            "total_count": len(formatted_alerts)
         }
         
     except Exception as e:
