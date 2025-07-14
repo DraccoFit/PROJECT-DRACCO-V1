@@ -2416,6 +2416,11 @@ async def get_health_metrics_history(current_user: User = Depends(get_current_us
             {"user_id": current_user.id}
         ).sort("calculated_at", -1).to_list(50)
         
+        # Convert ObjectId to string for JSON serialization
+        for metric in metrics:
+            if "_id" in metric:
+                metric["_id"] = str(metric["_id"])
+        
         return {
             "metrics": metrics,
             "total_records": len(metrics)
