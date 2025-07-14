@@ -967,15 +967,41 @@ async def generate_workout_plan(current_user: User = Depends(get_current_user)):
     if not current_user.evaluation:
         raise HTTPException(status_code=400, detail="Please complete your evaluation first")
     
-    # This would generate a personalized workout plan
+    # Generate AI-powered workout plan
+    ai_plan = await generate_workout_plan_ai(current_user.evaluation, current_user.id)
+    
+    if "error" in ai_plan:
+        raise HTTPException(status_code=500, detail=ai_plan["error"])
+    
+    # Convert AI plan to database format
+    sessions_by_day = {}
+    for day, workout_data in ai_plan.get("workouts", {}).items():
+        if workout_data:  # Only add if there's actually a workout for this day
+            workout_session = WorkoutSession(
+                name=workout_data.get("name", f"Entrenamiento {day}"),
+                exercises=workout_data.get("exercises", []),
+                total_duration=workout_data.get("duration", 60),
+                difficulty=DifficultyLevel(current_user.evaluation.get("experience_level", "beginner")),
+                focus_areas=workout_data.get("focus_areas", [])
+            )
+            sessions_by_day[day] = workout_session
+    
+    # Create workout plan
     plan = WorkoutPlan(
         user_id=current_user.id,
         week_number=1,
-        sessions={}  # This would be populated with actual workout sessions
+        sessions={day: session.dict() for day, session in sessions_by_day.items()}
     )
     
     await db.workout_plans.insert_one(plan.dict())
-    return {"message": "Plan de entrenamiento generado exitosamente", "plan_id": plan.id}
+    
+    return {
+        "message": "Plan de entrenamiento generado exitosamente",
+        "plan_id": plan.id,
+        "plan_details": ai_plan,
+        "total_workouts": len(sessions_by_day),
+        "weekly_schedule": list(sessions_by_day.keys())
+    }
 
 # Progress Tracking
 @api_router.post("/progress", response_model=ProgressEntry)
