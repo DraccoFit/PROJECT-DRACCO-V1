@@ -165,7 +165,7 @@ const Navbar = () => {
           <div className="flex items-center space-x-4">
             <div className="flex-shrink-0 flex items-center">
               <div className="w-10 h-10 bg-gradient-to-br from-primary-500 to-secondary-500 rounded-xl flex items-center justify-center text-white font-bold shadow-neon animate-pulse-glow">
-                💪
+                🐉
               </div>
               <span className="ml-3 text-2xl font-bold gradient-text">
                 FitnessPro
