@@ -2,6 +2,12 @@ import React, { useState, useEffect, createContext, useContext } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import axios from 'axios';
 import './App.css';
+import Nutrition from './components/Nutrition';
+import Workout from './components/Workout';
+import Progress from './components/Progress';
+import WaterTracker from './components/WaterTracker';
+import ChatBot from './components/ChatBot';
+import Forum from './components/Forum';
 
 // API Configuration
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
