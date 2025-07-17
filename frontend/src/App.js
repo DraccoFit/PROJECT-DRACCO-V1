@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useContext, createContext } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import './App.css';
+
+// Import all components
 import Nutrition from './components/Nutrition';
 import Workout from './components/Workout';
 import Progress from './components/Progress';
@@ -9,10 +10,7 @@ import WaterTracker from './components/WaterTracker';
 import ChatBot from './components/ChatBot';
 import Forum from './components/Forum';
 import Profile from './components/Profile';
-import PhotoAnalysis from './components/PhotoAnalysis';
-import FoodRecognition from './components/FoodRecognition';
-import AdvancedAnalytics from './components/AdvancedAnalytics';
-import PatternAlerts from './components/PatternAlerts';
+import { AdvancedAnalytics, PhotoAnalysis, FoodRecognition, PatternAlerts } from './components/AdvancedFeatures';
 
 // API Configuration
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
