@@ -1,38 +1,418 @@
-.App {
+/* Dark mode styles */
+html.dark {
+  color-scheme: dark;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+html.dark ::-webkit-scrollbar-track {
+  background: #374151;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 3px;
+}
+
+html.dark ::-webkit-scrollbar-thumb {
+  background: #6b7280;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
+}
+
+html.dark ::-webkit-scrollbar-thumb:hover {
+  background: #9ca3af;
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideIn {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(0); }
+}
+
+@keyframes pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+}
+
+@keyframes bounce {
+  0%, 20%, 53%, 80%, 100% { transform: translateY(0); }
+  40%, 43% { transform: translateY(-10px); }
+  70% { transform: translateY(-5px); }
+  90% { transform: translateY(-3px); }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.3s ease-out;
+}
+
+.animate-slideIn {
+  animation: slideIn 0.3s ease-out;
+}
+
+.animate-pulse-custom {
+  animation: pulse 2s infinite;
+}
+
+.animate-bounce-custom {
+  animation: bounce 1s infinite;
+}
+
+/* Gradient backgrounds */
+.bg-gradient-primary {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.bg-gradient-secondary {
+  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+}
+
+.bg-gradient-success {
+  background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+}
+
+.bg-gradient-warning {
+  background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);
+}
+
+/* Custom button styles */
+.btn-primary {
+  @apply bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg transition-all duration-200 transform hover:scale-105;
+}
+
+.btn-secondary {
+  @apply bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-2 px-4 rounded-lg transition-all duration-200;
+}
+
+.btn-success {
+  @apply bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded-lg transition-all duration-200 transform hover:scale-105;
+}
+
+.btn-danger {
+  @apply bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-4 rounded-lg transition-all duration-200 transform hover:scale-105;
+}
+
+/* Dark mode button variants */
+html.dark .btn-secondary {
+  @apply bg-gray-700 hover:bg-gray-600 text-gray-200;
+}
+
+/* Card styles */
+.card {
+  @apply bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 transition-all duration-200 hover:shadow-lg;
+}
+
+.card-header {
+  @apply border-b border-gray-200 dark:border-gray-700 pb-4 mb-4;
+}
+
+/* Form styles */
+.form-input {
+  @apply w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white transition-colors;
+}
+
+.form-label {
+  @apply block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2;
+}
+
+.form-select {
+  @apply form-input appearance-none bg-white dark:bg-gray-700 cursor-pointer;
+}
+
+/* Loading spinner */
+.spinner {
+  @apply inline-block w-4 h-4 border-2 border-gray-200 border-t-blue-600 rounded-full animate-spin;
+}
+
+.spinner-large {
+  @apply w-8 h-8 border-4;
+}
+
+/* Progress bar */
+.progress-bar {
+  @apply w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2 overflow-hidden;
+}
+
+.progress-fill {
+  @apply h-full bg-blue-600 dark:bg-blue-500 rounded-full transition-all duration-300 ease-out;
+}
+
+/* Notification styles */
+.notification {
+  @apply fixed top-4 right-4 p-4 rounded-lg shadow-lg z-50 max-w-sm;
+}
+
+.notification-success {
+  @apply bg-green-100 border border-green-400 text-green-700;
+}
+
+.notification-error {
+  @apply bg-red-100 border border-red-400 text-red-700;
+}
+
+.notification-warning {
+  @apply bg-yellow-100 border border-yellow-400 text-yellow-700;
+}
+
+.notification-info {
+  @apply bg-blue-100 border border-blue-400 text-blue-700;
+}
+
+/* Dark mode notification variants */
+html.dark .notification-success {
+  @apply bg-green-900 border-green-600 text-green-300;
+}
+
+html.dark .notification-error {
+  @apply bg-red-900 border-red-600 text-red-300;
+}
+
+html.dark .notification-warning {
+  @apply bg-yellow-900 border-yellow-600 text-yellow-300;
+}
+
+html.dark .notification-info {
+  @apply bg-blue-900 border-blue-600 text-blue-300;
+}
+
+/* Stats card animations */
+.stats-card {
+  @apply transform transition-all duration-200 hover:scale-105 hover:shadow-xl;
+}
+
+.stats-card:hover {
+  transform: translateY(-2px);
+}
+
+/* Sidebar animations */
+.sidebar-item {
+  @apply transform transition-all duration-200 hover:translate-x-1;
+}
+
+.sidebar-item.active {
+  @apply bg-blue-500 text-white shadow-lg;
+}
+
+/* Chat message styles */
+.chat-message {
+  @apply max-w-xs lg:max-w-md px-4 py-2 rounded-lg;
+}
+
+.chat-message.user {
+  @apply bg-blue-500 text-white ml-auto;
+}
+
+.chat-message.ai {
+  @apply bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 mr-auto;
+}
+
+/* Exercise card styles */
+.exercise-card {
+  @apply bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden transition-all duration-200 hover:shadow-lg hover:scale-105;
+}
+
+.exercise-card:hover {
+  transform: translateY(-4px);
+}
+
+/* Difficulty badges */
+.difficulty-beginner {
+  @apply bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300;
+}
+
+.difficulty-intermediate {
+  @apply bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300;
+}
+
+.difficulty-advanced {
+  @apply bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300;
+}
+
+/* Responsive design helpers */
+@media (max-width: 768px) {
+  .mobile-hidden {
+    display: none;
+  }
+  
+  .mobile-full {
+    width: 100%;
+  }
+  
+  .mobile-center {
     text-align: center;
+  }
 }
 
-.App-logo {
-    height: 40vmin;
-    pointer-events: none;
+/* Custom focus styles */
+.focus-ring {
+  @apply focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800;
 }
 
-@media (prefers-reduced-motion: no-preference) {
-    .App-logo {
-        animation: App-logo-spin infinite 20s linear;
-    }
+/* Tooltip styles */
+.tooltip {
+  @apply absolute z-10 px-3 py-2 text-sm font-medium text-white bg-gray-900 rounded-lg shadow-sm opacity-0 transition-opacity duration-300;
 }
 
-.App-header {
-    background-color: #0f0f10;
-    min-height: 100vh;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    font-size: calc(10px + 2vmin);
-    color: white;
+.tooltip.show {
+  @apply opacity-100;
 }
 
-.App-link {
-    color: #61dafb;
+/* Menu animations */
+.menu-enter {
+  @apply opacity-0 scale-95;
 }
 
-@keyframes App-logo-spin {
-    from {
-        transform: rotate(0deg);
-    }
-    to {
-        transform: rotate(360deg);
-    }
+.menu-enter-active {
+  @apply opacity-100 scale-100 transition-all duration-200;
+}
+
+.menu-exit {
+  @apply opacity-100 scale-100;
+}
+
+.menu-exit-active {
+  @apply opacity-0 scale-95 transition-all duration-200;
+}
+
+/* Water intake animation */
+.water-wave {
+  background: linear-gradient(45deg, #3b82f6, #60a5fa);
+  animation: wave 2s ease-in-out infinite;
+}
+
+@keyframes wave {
+  0%, 100% { transform: scaleY(1); }
+  50% { transform: scaleY(0.8); }
+}
+
+/* Nutrition chart styles */
+.nutrition-chart {
+  @apply relative w-full h-64 bg-gray-100 dark:bg-gray-800 rounded-lg overflow-hidden;
+}
+
+.nutrition-segment {
+  @apply absolute top-0 left-0 h-full transition-all duration-500;
+}
+
+.nutrition-segment.protein {
+  @apply bg-red-500;
+}
+
+.nutrition-segment.carbs {
+  @apply bg-yellow-500;
+}
+
+.nutrition-segment.fat {
+  @apply bg-green-500;
+}
+
+/* Workout timer styles */
+.timer-circle {
+  @apply w-32 h-32 rounded-full border-4 border-gray-300 dark:border-gray-600 relative;
+}
+
+.timer-fill {
+  @apply absolute inset-0 rounded-full border-4 border-blue-500 transform -rotate-90 transition-all duration-1000;
+}
+
+/* Achievement badges */
+.achievement-badge {
+  @apply inline-flex items-center px-3 py-1 rounded-full text-sm font-medium;
+}
+
+.achievement-gold {
+  @apply bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300;
+}
+
+.achievement-silver {
+  @apply bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300;
+}
+
+.achievement-bronze {
+  @apply bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300;
+}
+
+/* Social sharing buttons */
+.share-button {
+  @apply w-10 h-10 rounded-full flex items-center justify-center text-white transition-all duration-200 hover:scale-110;
+}
+
+.share-facebook {
+  @apply bg-blue-600 hover:bg-blue-700;
+}
+
+.share-twitter {
+  @apply bg-blue-400 hover:bg-blue-500;
+}
+
+.share-instagram {
+  @apply bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600;
+}
+
+/* Custom checkbox styles */
+.custom-checkbox {
+  @apply w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600;
+}
+
+/* Photo upload area */
+.photo-upload {
+  @apply border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-8 text-center hover:border-blue-500 dark:hover:border-blue-400 transition-colors duration-200;
+}
+
+.photo-upload.dragover {
+  @apply border-blue-500 dark:border-blue-400 bg-blue-50 dark:bg-blue-900/20;
+}
+
+/* Responsive grid layouts */
+.grid-auto-fit {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1.5rem;
+}
+
+.grid-auto-fill {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 1rem;
+}
+
+/* Utility classes */
+.text-gradient {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.glass {
+  @apply bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm;
+}
+
+.shadow-colored {
+  box-shadow: 0 10px 25px -5px rgba(59, 130, 246, 0.5), 0 4px 6px -2px rgba(59, 130, 246, 0.1);
+}
+
+/* Print styles */
+@media print {
+  .print-hidden {
+    display: none !important;
+  }
+  
+  .print-visible {
+    display: block !important;
+  }
 }
