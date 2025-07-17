@@ -1,425 +1,628 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import axios from 'axios';
 
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
-const API = `${BACKEND_URL}/api`;
+const API = process.env.REACT_APP_BACKEND_URL;
 
 const Profile = ({ token, user }) => {
-  const [profile, setProfile] = useState(user || {});
-  const [editing, setEditing] = useState(false);
+  const [activeTab, setActiveTab] = useState('personal');
   const [loading, setLoading] = useState(false);
-  const [achievements, setAchievements] = useState([]);
-  const [stats, setStats] = useState({
-    totalWorkouts: 0,
-    totalDays: 0,
-    streakDays: 7,
-    caloriesBurned: 0
+  const [personalInfo, setPersonalInfo] = useState({
+    full_name: user?.full_name || '',
+    email: user?.email || '',
+    phone: '',
+    age: user?.evaluation?.age || '',
+    gender: user?.evaluation?.gender || 'male',
+    location: ''
   });
 
-  useEffect(() => {
-    fetchUserStats();
-    generateAchievements();
-  }, []);
+  const [preferences, setPreferences] = useState({
+    notifications: true,
+    email_updates: true,
+    theme: 'light',
+    language: 'es',
+    privacy_level: 'private'
+  });
 
-  const fetchUserStats = async () => {
-    // This would fetch real stats from the backend
-    // For now, we'll use mock data
-    setStats({
-      totalWorkouts: 25,
-      totalDays: 45,
-      streakDays: 7,
-      caloriesBurned: 12500
-    });
-  };
+  const [passwordData, setPasswordData] = useState({
+    current_password: '',
+    new_password: '',
+    confirm_password: ''
+  });
 
-  const generateAchievements = () => {
-    const mockAchievements = [
-      { id: 1, title: 'Primera Semana', description: 'Completa tu primera semana de entrenamiento', earned: true, date: '2024-01-15', icon: '🏆' },
-      { id: 2, title: 'Hydration Hero', description: 'Bebe 2L de agua por 7 días consecutivos', earned: true, date: '2024-01-20', icon: '💧' },
-      { id: 3, title: 'Progreso Fotográfico', description: 'Sube tu primera foto de progreso', earned: true, date: '2024-01-25', icon: '📸' },
-      { id: 4, title: 'Mentor Comunitario', description: 'Ayuda a 5 personas en el foro', earned: false, progress: 3, icon: '🤝' },
-      { id: 5, title: 'Racha de Fuego', description: 'Mantén una racha de 30 días', earned: false, progress: 7, icon: '🔥' },
-      { id: 6, title: 'Máquina de Cardio', description: 'Quema 10,000 calorías en total', earned: false, progress: 8500, icon: '🏃' }
-    ];
-    setAchievements(mockAchievements);
-  };
-
-  const handleSave = async () => {
+  const updatePersonalInfo = async (e) => {
+    e.preventDefault();
     setLoading(true);
+    
     try {
-      // This would save the profile to the backend
-      console.log('Saving profile:', profile);
-      setEditing(false);
+      const headers = { Authorization: `Bearer ${token}` };
+      await axios.put(`${API}/profile/personal`, personalInfo, { headers });
+      // Handle success
     } catch (error) {
-      console.error('Error saving profile:', error);
+      console.error('Error updating personal info:', error);
     } finally {
       setLoading(false);
     }
   };
 
-  const calculateBMI = () => {
-    if (profile.evaluation?.weight && profile.evaluation?.height) {
-      const heightInMeters = profile.evaluation.height / 100;
-      const bmi = profile.evaluation.weight / (heightInMeters * heightInMeters);
-      return bmi.toFixed(1);
+  const updatePreferences = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    
+    try {
+      const headers = { Authorization: `Bearer ${token}` };
+      await axios.put(`${API}/profile/preferences`, preferences, { headers });
+      // Handle success
+    } catch (error) {
+      console.error('Error updating preferences:', error);
+    } finally {
+      setLoading(false);
     }
-    return null;
   };
 
-  const getBMICategory = (bmi) => {
-    if (bmi < 18.5) return { category: 'Bajo peso', color: 'text-blue-600' };
-    if (bmi < 25) return { category: 'Normal', color: 'text-green-600' };
-    if (bmi < 30) return { category: 'Sobrepeso', color: 'text-yellow-600' };
-    return { category: 'Obesidad', color: 'text-red-600' };
+  const updatePassword = async (e) => {
+    e.preventDefault();
+    if (passwordData.new_password !== passwordData.confirm_password) {
+      alert('Las contraseñas no coinciden');
+      return;
+    }
+    
+    setLoading(true);
+    
+    try {
+      const headers = { Authorization: `Bearer ${token}` };
+      await axios.put(`${API}/profile/password`, {
+        current_password: passwordData.current_password,
+        new_password: passwordData.new_password
+      }, { headers });
+      
+      setPasswordData({
+        current_password: '',
+        new_password: '',
+        confirm_password: ''
+      });
+      // Handle success
+    } catch (error) {
+      console.error('Error updating password:', error);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const getProgressPercentage = (progress, total) => {
-    return Math.min((progress / total) * 100, 100);
-  };
+  const tabs = [
+    { id: 'personal', label: 'Información Personal', icon: '👤' },
+    { id: 'preferences', label: 'Preferencias', icon: '⚙️' },
+    { id: 'security', label: 'Seguridad', icon: '🔒' },
+    { id: 'stats', label: 'Estadísticas', icon: '📊' }
+  ];
 
-  const bmi = calculateBMI();
-  const bmiCategory = bmi ? getBMICategory(parseFloat(bmi)) : null;
-
-  return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-          👤 Mi Perfil
-        </h1>
+  const renderPersonalInfo = () => (
+    <form onSubmit={updatePersonalInfo} className="space-y-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            Nombre Completo
+          </label>
+          <input
+            type="text"
+            value={personalInfo.full_name}
+            onChange={(e) => setPersonalInfo({...personalInfo, full_name: e.target.value})}
+            className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+            required
+          />
+        </div>
+        
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            Email
+          </label>
+          <input
+            type="email"
+            value={personalInfo.email}
+            onChange={(e) => setPersonalInfo({...personalInfo, email: e.target.value})}
+            className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+            required
+          />
+        </div>
+        
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            Teléfono
+          </label>
+          <input
+            type="tel"
+            value={personalInfo.phone}
+            onChange={(e) => setPersonalInfo({...personalInfo, phone: e.target.value})}
+            className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+            placeholder="+1 (555) 123-4567"
+          />
+        </div>
+        
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            Edad
+          </label>
+          <input
+            type="number"
+            value={personalInfo.age}
+            onChange={(e) => setPersonalInfo({...personalInfo, age: e.target.value})}
+            className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+            min="13"
+            max="120"
+          />
+        </div>
+        
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            Género
+          </label>
+          <select
+            value={personalInfo.gender}
+            onChange={(e) => setPersonalInfo({...personalInfo, gender: e.target.value})}
+            className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+          >
+            <option value="male">Masculino</option>
+            <option value="female">Femenino</option>
+            <option value="other">Otro</option>
+          </select>
+        </div>
+        
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            Ubicación
+          </label>
+          <input
+            type="text"
+            value={personalInfo.location}
+            onChange={(e) => setPersonalInfo({...personalInfo, location: e.target.value})}
+            className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+            placeholder="Ciudad, País"
+          />
+        </div>
+      </div>
+      
+      <div className="flex justify-end">
         <button
-          onClick={() => setEditing(!editing)}
-          className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition-colors"
+          type="submit"
+          disabled={loading}
+          className="bg-gradient-to-r from-blue-500 to-purple-500 text-white px-8 py-3 rounded-xl font-medium hover:shadow-lg hover:shadow-blue-500/25 transition-all duration-300 disabled:opacity-50"
         >
-          {editing ? 'Cancelar' : 'Editar Perfil'}
+          {loading ? 'Guardando...' : 'Guardar Cambios'}
         </button>
       </div>
+    </form>
+  );
 
-      {/* Profile Overview */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Basic Info */}
-        <div className="lg:col-span-2 bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
-          <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
-            Información Personal
-          </h2>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Nombre Completo
-              </label>
-              {editing ? (
-                <input
-                  type="text"
-                  value={profile.full_name || ''}
-                  onChange={(e) => setProfile(prev => ({ ...prev, full_name: e.target.value }))}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
-                />
-              ) : (
-                <p className="text-gray-900 dark:text-white">{profile.full_name || 'No especificado'}</p>
-              )}
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Email
-              </label>
-              <p className="text-gray-900 dark:text-white">{profile.email}</p>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Edad
-              </label>
-              <p className="text-gray-900 dark:text-white">
-                {profile.evaluation?.age || 'No especificado'} años
-              </p>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Género
-              </label>
-              <p className="text-gray-900 dark:text-white capitalize">
-                {profile.evaluation?.gender || 'No especificado'}
-              </p>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Peso Actual
-              </label>
-              <p className="text-gray-900 dark:text-white">
-                {profile.evaluation?.weight || 'No especificado'} kg
-              </p>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Altura
-              </label>
-              <p className="text-gray-900 dark:text-white">
-                {profile.evaluation?.height || 'No especificado'} cm
-              </p>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Objetivo
-              </label>
-              <p className="text-gray-900 dark:text-white">
-                {profile.evaluation?.goal === 'lose_weight' ? 'Perder peso' :
-                 profile.evaluation?.goal === 'gain_weight' ? 'Ganar peso' :
-                 profile.evaluation?.goal === 'build_muscle' ? 'Ganar músculo' :
-                 profile.evaluation?.goal === 'maintain_weight' ? 'Mantener peso' :
-                 profile.evaluation?.goal === 'improve_fitness' ? 'Mejorar condición física' :
-                 'No especificado'}
-              </p>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Nivel de Actividad
-              </label>
-              <p className="text-gray-900 dark:text-white capitalize">
-                {profile.evaluation?.activity_level?.replace('_', ' ') || 'No especificado'}
-              </p>
-            </div>
-          </div>
-
-          {editing && (
-            <div className="mt-6 flex justify-end">
+  const renderPreferences = () => (
+    <form onSubmit={updatePreferences} className="space-y-6">
+      <div className="space-y-6">
+        <div>
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+            Notificaciones
+          </h3>
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Notificaciones Push
+                </label>
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  Recibir notificaciones en tiempo real
+                </p>
+              </div>
               <button
-                onClick={handleSave}
-                disabled={loading}
-                className="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg transition-colors disabled:opacity-50"
+                type="button"
+                onClick={() => setPreferences({...preferences, notifications: !preferences.notifications})}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                  preferences.notifications ? 'bg-blue-600' : 'bg-gray-200 dark:bg-gray-700'
+                }`}
               >
-                {loading ? 'Guardando...' : 'Guardar Cambios'}
+                <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                  preferences.notifications ? 'translate-x-6' : 'translate-x-1'
+                }`} />
               </button>
             </div>
-          )}
-        </div>
-
-        {/* Health Stats */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
-          <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
-            Estadísticas de Salud
-          </h2>
-          
-          <div className="space-y-4">
-            {bmi && (
-              <div className="text-center">
-                <div className="text-3xl font-bold text-gray-900 dark:text-white mb-1">
-                  {bmi}
-                </div>
-                <div className="text-sm text-gray-500 dark:text-gray-400 mb-2">
-                  Índice de Masa Corporal
-                </div>
-                <div className={`text-sm font-medium ${bmiCategory.color}`}>
-                  {bmiCategory.category}
-                </div>
+            
+            <div className="flex items-center justify-between">
+              <div>
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Actualizaciones por Email
+                </label>
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  Recibir actualizaciones semanales
+                </p>
               </div>
-            )}
-
-            <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
-              <div className="text-center">
-                <div className="text-2xl font-bold text-blue-600 dark:text-blue-400 mb-1">
-                  {profile.daily_calories || 'N/A'}
-                </div>
-                <div className="text-sm text-gray-500 dark:text-gray-400">
-                  Calorías diarias recomendadas
-                </div>
-              </div>
-            </div>
-
-            <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
-              <div className="text-center">
-                <div className="text-2xl font-bold text-green-600 dark:text-green-400 mb-1">
-                  {profile.tmb || 'N/A'}
-                </div>
-                <div className="text-sm text-gray-500 dark:text-gray-400">
-                  Tasa Metabólica Basal
-                </div>
-              </div>
+              <button
+                type="button"
+                onClick={() => setPreferences({...preferences, email_updates: !preferences.email_updates})}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                  preferences.email_updates ? 'bg-blue-600' : 'bg-gray-200 dark:bg-gray-700'
+                }`}
+              >
+                <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                  preferences.email_updates ? 'translate-x-6' : 'translate-x-1'
+                }`} />
+              </button>
             </div>
           </div>
         </div>
-      </div>
-
-      {/* Activity Stats */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
-        <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
-          Estadísticas de Actividad
-        </h2>
         
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-          <div className="text-center">
-            <div className="text-3xl font-bold text-purple-600 dark:text-purple-400 mb-2">
-              {stats.totalWorkouts}
+        <div>
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+            Apariencia
+          </h3>
+          <div className="space-y-3">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Tema
+              </label>
+              <select
+                value={preferences.theme}
+                onChange={(e) => setPreferences({...preferences, theme: e.target.value})}
+                className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+              >
+                <option value="light">Claro</option>
+                <option value="dark">Oscuro</option>
+                <option value="auto">Automático</option>
+              </select>
             </div>
-            <div className="text-sm text-gray-500 dark:text-gray-400">
-              Entrenamientos Completados
-            </div>
-          </div>
-          
-          <div className="text-center">
-            <div className="text-3xl font-bold text-blue-600 dark:text-blue-400 mb-2">
-              {stats.totalDays}
-            </div>
-            <div className="text-sm text-gray-500 dark:text-gray-400">
-              Días Activos
-            </div>
-          </div>
-          
-          <div className="text-center">
-            <div className="text-3xl font-bold text-orange-600 dark:text-orange-400 mb-2">
-              {stats.streakDays}
-            </div>
-            <div className="text-sm text-gray-500 dark:text-gray-400">
-              Racha Actual (días)
-            </div>
-          </div>
-          
-          <div className="text-center">
-            <div className="text-3xl font-bold text-red-600 dark:text-red-400 mb-2">
-              {stats.caloriesBurned.toLocaleString()}
-            </div>
-            <div className="text-sm text-gray-500 dark:text-gray-400">
-              Calorías Quemadas
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Idioma
+              </label>
+              <select
+                value={preferences.language}
+                onChange={(e) => setPreferences({...preferences, language: e.target.value})}
+                className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+              >
+                <option value="es">Español</option>
+                <option value="en">English</option>
+                <option value="fr">Français</option>
+              </select>
             </div>
           </div>
         </div>
-      </div>
-
-      {/* Achievements */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
-        <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
-          🏆 Logros
-        </h2>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {achievements.map(achievement => (
-            <div 
-              key={achievement.id} 
-              className={`p-4 rounded-lg border-2 ${
-                achievement.earned 
-                  ? 'border-yellow-400 bg-yellow-50 dark:bg-yellow-900/20' 
-                  : 'border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700'
-              }`}
+        <div>
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+            Privacidad
+          </h3>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Nivel de Privacidad
+            </label>
+            <select
+              value={preferences.privacy_level}
+              onChange={(e) => setPreferences({...preferences, privacy_level: e.target.value})}
+              className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
             >
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-2xl">{achievement.icon}</span>
-                {achievement.earned && (
-                  <span className="text-yellow-600 dark:text-yellow-400 text-sm">
-                    ✓ Completado
-                  </span>
-                )}
-              </div>
-              
-              <h3 className={`font-semibold mb-1 ${
-                achievement.earned 
-                  ? 'text-yellow-800 dark:text-yellow-300' 
-                  : 'text-gray-700 dark:text-gray-300'
-              }`}>
-                {achievement.title}
-              </h3>
-              
-              <p className={`text-sm mb-2 ${
-                achievement.earned 
-                  ? 'text-yellow-700 dark:text-yellow-400' 
-                  : 'text-gray-600 dark:text-gray-400'
-              }`}>
-                {achievement.description}
-              </p>
-
-              {achievement.earned ? (
-                <div className="text-xs text-yellow-600 dark:text-yellow-400">
-                  Obtenido: {new Date(achievement.date).toLocaleDateString()}
-                </div>
-              ) : achievement.progress !== undefined ? (
-                <div className="mt-2">
-                  <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400 mb-1">
-                    <span>Progreso</span>
-                    <span>{achievement.progress}</span>
-                  </div>
-                  <div className="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-2">
-                    <div 
-                      className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-                      style={{ width: `${getProgressPercentage(achievement.progress, achievement.id === 4 ? 5 : achievement.id === 5 ? 30 : 10000)}%` }}
-                    ></div>
-                  </div>
-                </div>
-              ) : (
-                <div className="text-xs text-gray-500 dark:text-gray-400">
-                  Sin progreso
-                </div>
-              )}
-            </div>
-          ))}
+              <option value="public">Público</option>
+              <option value="friends">Solo Amigos</option>
+              <option value="private">Privado</option>
+            </select>
+          </div>
         </div>
       </div>
+      
+      <div className="flex justify-end">
+        <button
+          type="submit"
+          disabled={loading}
+          className="bg-gradient-to-r from-green-500 to-emerald-500 text-white px-8 py-3 rounded-xl font-medium hover:shadow-lg hover:shadow-green-500/25 transition-all duration-300 disabled:opacity-50"
+        >
+          {loading ? 'Guardando...' : 'Guardar Preferencias'}
+        </button>
+      </div>
+    </form>
+  );
 
-      {/* Account Settings */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
-        <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
-          Configuración de Cuenta
-        </h2>
+  const renderSecurity = () => (
+    <div className="space-y-6">
+      <form onSubmit={updatePassword} className="space-y-6">
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+          Cambiar Contraseña
+        </h3>
+        
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            Contraseña Actual
+          </label>
+          <input
+            type="password"
+            value={passwordData.current_password}
+            onChange={(e) => setPasswordData({...passwordData, current_password: e.target.value})}
+            className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500 dark:bg-gray-700 dark:text-white"
+            required
+          />
+        </div>
+        
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            Nueva Contraseña
+          </label>
+          <input
+            type="password"
+            value={passwordData.new_password}
+            onChange={(e) => setPasswordData({...passwordData, new_password: e.target.value})}
+            className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500 dark:bg-gray-700 dark:text-white"
+            required
+          />
+        </div>
+        
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            Confirmar Nueva Contraseña
+          </label>
+          <input
+            type="password"
+            value={passwordData.confirm_password}
+            onChange={(e) => setPasswordData({...passwordData, confirm_password: e.target.value})}
+            className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500 dark:bg-gray-700 dark:text-white"
+            required
+          />
+        </div>
+        
+        <div className="flex justify-end">
+          <button
+            type="submit"
+            disabled={loading}
+            className="bg-gradient-to-r from-red-500 to-pink-500 text-white px-8 py-3 rounded-xl font-medium hover:shadow-lg hover:shadow-red-500/25 transition-all duration-300 disabled:opacity-50"
+          >
+            {loading ? 'Actualizando...' : 'Actualizar Contraseña'}
+          </button>
+        </div>
+      </form>
+      
+      <div className="border-t border-gray-200 dark:border-gray-700 pt-6">
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+          Configuración de Seguridad
+        </h3>
         
         <div className="space-y-4">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-800 rounded-xl">
             <div>
-              <h3 className="font-medium text-gray-900 dark:text-white">
-                Notificaciones por Email
-              </h3>
+              <h4 className="font-medium text-gray-900 dark:text-white">
+                Autenticación de Dos Factores
+              </h4>
               <p className="text-sm text-gray-500 dark:text-gray-400">
-                Recibir recordatorios y actualizaciones por email
+                Añade una capa extra de seguridad
               </p>
             </div>
-            <label className="relative inline-flex items-center cursor-pointer">
-              <input type="checkbox" className="sr-only peer" defaultChecked />
-              <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
-            </label>
+            <button className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">
+              Activar
+            </button>
           </div>
-
-          <div className="flex items-center justify-between">
+          
+          <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-800 rounded-xl">
             <div>
-              <h3 className="font-medium text-gray-900 dark:text-white">
-                Recordatorios de Entrenamiento
-              </h3>
+              <h4 className="font-medium text-gray-900 dark:text-white">
+                Sesiones Activas
+              </h4>
               <p className="text-sm text-gray-500 dark:text-gray-400">
-                Recibir recordatorios para entrenar
+                Gestiona tus sesiones en otros dispositivos
               </p>
             </div>
-            <label className="relative inline-flex items-center cursor-pointer">
-              <input type="checkbox" className="sr-only peer" defaultChecked />
-              <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
-            </label>
+            <button className="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition-colors">
+              Ver Sesiones
+            </button>
           </div>
+        </div>
+      </div>
+    </div>
+  );
 
+  const renderStats = () => (
+    <div className="space-y-6">
+      <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+        Estadísticas de Uso
+      </h3>
+      
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="bg-gradient-to-r from-blue-50 to-cyan-50 dark:from-blue-900/20 dark:to-cyan-900/20 rounded-xl p-6">
           <div className="flex items-center justify-between">
             <div>
-              <h3 className="font-medium text-gray-900 dark:text-white">
-                Compartir Progreso
-              </h3>
-              <p className="text-sm text-gray-500 dark:text-gray-400">
-                Permitir que otros vean tu progreso en el foro
+              <p className="text-sm text-blue-600 dark:text-blue-400 font-medium">
+                Días Activos
+              </p>
+              <p className="text-2xl font-bold text-blue-700 dark:text-blue-300">
+                45
               </p>
             </div>
-            <label className="relative inline-flex items-center cursor-pointer">
-              <input type="checkbox" className="sr-only peer" />
-              <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
-            </label>
+            <div className="text-3xl">📅</div>
           </div>
-
-          <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
-            <div className="flex space-x-4">
-              <button className="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg transition-colors">
-                Cambiar Contraseña
-              </button>
-              <button className="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg transition-colors">
-                Eliminar Cuenta
-              </button>
+        </div>
+        
+        <div className="bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 rounded-xl p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-green-600 dark:text-green-400 font-medium">
+                Entrenamientos
+              </p>
+              <p className="text-2xl font-bold text-green-700 dark:text-green-300">
+                32
+              </p>
             </div>
+            <div className="text-3xl">🏋️</div>
+          </div>
+        </div>
+        
+        <div className="bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 rounded-xl p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-purple-600 dark:text-purple-400 font-medium">
+                Planes Completados
+              </p>
+              <p className="text-2xl font-bold text-purple-700 dark:text-purple-300">
+                8
+              </p>
+            </div>
+            <div className="text-3xl">✅</div>
+          </div>
+        </div>
+        
+        <div className="bg-gradient-to-r from-orange-50 to-red-50 dark:from-orange-900/20 dark:to-red-900/20 rounded-xl p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-orange-600 dark:text-orange-400 font-medium">
+                Calorías Quemadas
+              </p>
+              <p className="text-2xl font-bold text-orange-700 dark:text-orange-300">
+                15,420
+              </p>
+            </div>
+            <div className="text-3xl">🔥</div>
+          </div>
+        </div>
+        
+        <div className="bg-gradient-to-r from-teal-50 to-blue-50 dark:from-teal-900/20 dark:to-blue-900/20 rounded-xl p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-teal-600 dark:text-teal-400 font-medium">
+                Agua Consumida
+              </p>
+              <p className="text-2xl font-bold text-teal-700 dark:text-teal-300">
+                890L
+              </p>
+            </div>
+            <div className="text-3xl">💧</div>
+          </div>
+        </div>
+        
+        <div className="bg-gradient-to-r from-yellow-50 to-orange-50 dark:from-yellow-900/20 dark:to-orange-900/20 rounded-xl p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-yellow-600 dark:text-yellow-400 font-medium">
+                Tiempo Activo
+              </p>
+              <p className="text-2xl font-bold text-yellow-700 dark:text-yellow-300">
+                156h
+              </p>
+            </div>
+            <div className="text-3xl">⏱️</div>
+          </div>
+        </div>
+      </div>
+      
+      <div className="bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-700 rounded-xl p-6">
+        <h4 className="font-semibold text-gray-900 dark:text-white mb-4">
+          Logros Recientes
+        </h4>
+        <div className="space-y-3">
+          <div className="flex items-center space-x-3">
+            <div className="w-10 h-10 bg-gradient-to-r from-yellow-400 to-orange-400 rounded-full flex items-center justify-center">
+              <span className="text-white font-bold">🏆</span>
+            </div>
+            <div>
+              <p className="font-medium text-gray-900 dark:text-white">
+                30 Días Consecutivos
+              </p>
+              <p className="text-sm text-gray-500 dark:text-gray-400">
+                ¡Mantuviste tu racha por un mes completo!
+              </p>
+            </div>
+          </div>
+          
+          <div className="flex items-center space-x-3">
+            <div className="w-10 h-10 bg-gradient-to-r from-blue-400 to-purple-400 rounded-full flex items-center justify-center">
+              <span className="text-white font-bold">💪</span>
+            </div>
+            <div>
+              <p className="font-medium text-gray-900 dark:text-white">
+                Fuerza Máxima
+              </p>
+              <p className="text-sm text-gray-500 dark:text-gray-400">
+                Alcanzaste tu record personal en bench press
+              </p>
+            </div>
+          </div>
+          
+          <div className="flex items-center space-x-3">
+            <div className="w-10 h-10 bg-gradient-to-r from-green-400 to-emerald-400 rounded-full flex items-center justify-center">
+              <span className="text-white font-bold">🥗</span>
+            </div>
+            <div>
+              <p className="font-medium text-gray-900 dark:text-white">
+                Nutrición Perfecta
+              </p>
+              <p className="text-sm text-gray-500 dark:text-gray-400">
+                Seguiste tu plan nutricional por 2 semanas
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderTabContent = () => {
+    switch (activeTab) {
+      case 'personal':
+        return renderPersonalInfo();
+      case 'preferences':
+        return renderPreferences();
+      case 'security':
+        return renderSecurity();
+      case 'stats':
+        return renderStats();
+      default:
+        return renderPersonalInfo();
+    }
+  };
+
+  return (
+    <div className="space-y-8 animate-fade-in">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0">
+        <div>
+          <h1 className="text-4xl font-bold gradient-text animate-slide-up">
+            Mi Perfil
+          </h1>
+          <p className="text-gray-600 dark:text-gray-400 mt-2 animate-slide-up" style={{ animationDelay: '0.1s' }}>
+            Gestiona tu información personal y configuración 👤
+          </p>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+        {/* Sidebar de Pestañas */}
+        <div className="lg:col-span-1">
+          <div className="glass rounded-2xl p-6 animate-slide-up">
+            <div className="flex items-center space-x-3 mb-6">
+              <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-500 rounded-full flex items-center justify-center text-white text-xl font-bold">
+                {user?.full_name?.charAt(0).toUpperCase() || 'U'}
+              </div>
+              <div>
+                <h3 className="font-semibold text-gray-900 dark:text-white">
+                  {user?.full_name || 'Usuario'}
+                </h3>
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  {user?.email || 'email@ejemplo.com'}
+                </p>
+              </div>
+            </div>
+            
+            <nav className="space-y-2">
+              {tabs.map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl transition-all duration-300 ${
+                    activeTab === tab.id
+                      ? 'bg-gradient-to-r from-blue-500 to-purple-500 text-white shadow-lg'
+                      : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'
+                  }`}
+                >
+                  <span className="text-xl">{tab.icon}</span>
+                  <span className="font-medium">{tab.label}</span>
+                </button>
+              ))}
+            </nav>
+          </div>
+        </div>
+
+        {/* Contenido Principal */}
+        <div className="lg:col-span-3">
+          <div className="glass rounded-2xl p-8 animate-slide-up" style={{ animationDelay: '0.2s' }}>
+            {renderTabContent()}
           </div>
         </div>
       </div>
