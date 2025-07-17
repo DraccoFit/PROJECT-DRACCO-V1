@@ -1,14 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
-const API = `${BACKEND_URL}/api`;
+const API = process.env.REACT_APP_BACKEND_URL;
 
 const ChatBot = ({ token }) => {
   const [messages, setMessages] = useState([]);
-  const [newMessage, setNewMessage] = useState('');
+  const [currentMessage, setCurrentMessage] = useState('');
+  const [isTyping, setIsTyping] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [chatHistory, setChatHistory] = useState([]);
   const messagesEndRef = useRef(null);
 
   useEffect(() => {
@@ -19,324 +18,317 @@ const ChatBot = ({ token }) => {
     scrollToBottom();
   }, [messages]);
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
-
   const fetchChatHistory = async () => {
     try {
       const headers = { Authorization: `Bearer ${token}` };
       const response = await axios.get(`${API}/chat/history`, { headers });
-      
-      const formattedMessages = response.data.flatMap(chat => [
-        { type: 'user', content: chat.message, timestamp: chat.timestamp },
-        { type: 'bot', content: chat.response, timestamp: chat.timestamp }
-      ]);
-      
-      setMessages(formattedMessages);
-      setChatHistory(response.data);
+      setMessages(response.data);
     } catch (error) {
       console.error('Error fetching chat history:', error);
     }
   };
 
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
   const sendMessage = async (e) => {
     e.preventDefault();
-    if (!newMessage.trim()) return;
+    if (!currentMessage.trim() || loading) return;
 
-    const userMessage = { type: 'user', content: newMessage, timestamp: new Date() };
+    const userMessage = {
+      id: Date.now(),
+      message: currentMessage,
+      response: '',
+      timestamp: new Date().toISOString(),
+      isUser: true
+    };
+
     setMessages(prev => [...prev, userMessage]);
-    setNewMessage('');
+    setCurrentMessage('');
     setLoading(true);
+    setIsTyping(true);
 
     try {
       const headers = { Authorization: `Bearer ${token}` };
-      const response = await axios.post(`${API}/chat`, 
-        `message=${encodeURIComponent(newMessage)}`, 
-        { 
-          headers: {
-            ...headers,
-            'Content-Type': 'application/x-www-form-urlencoded'
-          }
-        }
-      );
+      const response = await axios.post(`${API}/chat`, {
+        message: currentMessage
+      }, { headers });
 
-      const botMessage = { 
-        type: 'bot', 
-        content: response.data.response, 
-        timestamp: new Date() 
+      const botMessage = {
+        id: Date.now() + 1,
+        message: currentMessage,
+        response: response.data.response,
+        timestamp: new Date().toISOString(),
+        isUser: false
       };
-      
-      setMessages(prev => [...prev, botMessage]);
+
+      setMessages(prev => [...prev.slice(0, -1), botMessage]);
     } catch (error) {
       console.error('Error sending message:', error);
-      const errorMessage = { 
-        type: 'bot', 
-        content: 'Lo siento, hubo un error al procesar tu mensaje. Por favor, inténtalo de nuevo.', 
-        timestamp: new Date() 
+      const errorMessage = {
+        id: Date.now() + 1,
+        message: currentMessage,
+        response: 'Lo siento, hubo un error procesando tu mensaje. Por favor, inténtalo de nuevo.',
+        timestamp: new Date().toISOString(),
+        isUser: false,
+        isError: true
       };
-      setMessages(prev => [...prev, errorMessage]);
+      setMessages(prev => [...prev.slice(0, -1), errorMessage]);
     } finally {
       setLoading(false);
+      setIsTyping(false);
     }
   };
 
-  const quickQuestions = [
-    '¿Cómo puedo mejorar mi dieta?',
-    '¿Qué ejercicios son mejores para principiantes?',
-    '¿Cuánta agua debo beber al día?',
-    '¿Cómo puedo mantener la motivación?',
-    '¿Qué suplementos recomiendas?',
-    '¿Cómo puedo perder peso de forma saludable?'
+  const formatTime = (timestamp) => {
+    return new Date(timestamp).toLocaleTimeString('es-ES', {
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
+  const suggestedQuestions = [
+    "¿Cómo puedo mejorar mi rutina de ejercicios?",
+    "¿Qué alimentos debo evitar para mi objetivo?",
+    "¿Cuántas calorías debo consumir al día?",
+    "¿Cómo puedo aumentar mi masa muscular?",
+    "¿Qué suplementos me recomiendas?",
+    "¿Cómo puedo mejorar mi recuperación muscular?"
   ];
 
-  const handleQuickQuestion = (question) => {
-    setNewMessage(question);
+  const quickReply = (question) => {
+    setCurrentMessage(question);
   };
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-          🤖 Asistente Fitness IA
-        </h1>
-        <div className="flex items-center space-x-2 text-sm text-gray-500 dark:text-gray-400">
-          <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-          <span>En línea</span>
+    <div className="h-full flex flex-col animate-fade-in">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0 mb-6">
+        <div>
+          <h1 className="text-4xl font-bold gradient-text animate-slide-up">
+            Chat con IA
+          </h1>
+          <p className="text-gray-600 dark:text-gray-400 mt-2 animate-slide-up" style={{ animationDelay: '0.1s' }}>
+            Tu entrenador personal inteligente 24/7 🤖
+          </p>
+        </div>
+        <div className="flex items-center space-x-2">
+          <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
+          <span className="text-sm text-gray-600 dark:text-gray-400">
+            IA en línea
+          </span>
         </div>
       </div>
 
-      {/* Chat Interface */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md h-96 flex flex-col">
-        {/* Chat Header */}
-        <div className="border-b border-gray-200 dark:border-gray-700 p-4">
-          <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center">
-              <span className="text-white font-bold">🤖</span>
-            </div>
-            <div>
-              <h3 className="font-semibold text-gray-900 dark:text-white">
-                Asistente Fitness
-              </h3>
-              <p className="text-sm text-gray-500 dark:text-gray-400">
-                Tu entrenador personal con IA
-              </p>
-            </div>
+      <div className="flex-1 flex flex-col lg:flex-row gap-6">
+        {/* Chat Principal */}
+        <div className="flex-1 glass rounded-2xl p-6 flex flex-col animate-slide-up">
+          {/* Área de Mensajes */}
+          <div className="flex-1 overflow-y-auto mb-6 space-y-4 max-h-96 lg:max-h-none">
+            {messages.length === 0 ? (
+              <div className="text-center py-8">
+                <div className="w-20 h-20 mx-auto mb-4 bg-gradient-to-br from-blue-100 to-purple-100 dark:from-blue-900/20 dark:to-purple-900/20 rounded-full flex items-center justify-center">
+                  <span className="text-3xl">🤖</span>
+                </div>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+                  ¡Hola! Soy tu entrenador virtual
+                </h3>
+                <p className="text-gray-600 dark:text-gray-400 mb-4">
+                  Estoy aquí para ayudarte con tus objetivos de fitness, nutrición y bienestar.
+                </p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  Pregúntame cualquier cosa relacionada con tu entrenamiento
+                </p>
+              </div>
+            ) : (
+              <>
+                {messages.map((msg) => (
+                  <div key={msg.id} className="space-y-2">
+                    {/* Mensaje del Usuario */}
+                    {msg.isUser && (
+                      <div className="flex justify-end">
+                        <div className="max-w-xs lg:max-w-md">
+                          <div className="bg-gradient-to-r from-blue-500 to-purple-500 text-white rounded-2xl rounded-br-sm px-4 py-3 shadow-lg">
+                            <p className="text-sm">{msg.message}</p>
+                          </div>
+                          <div className="text-xs text-gray-500 dark:text-gray-400 mt-1 text-right">
+                            {formatTime(msg.timestamp)}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {/* Respuesta del Bot */}
+                    {!msg.isUser && (
+                      <div className="flex justify-start">
+                        <div className="flex items-start space-x-3 max-w-xs lg:max-w-md">
+                          <div className="w-8 h-8 bg-gradient-to-br from-green-500 to-emerald-500 rounded-full flex items-center justify-center text-white text-sm font-bold flex-shrink-0">
+                            🤖
+                          </div>
+                          <div className="flex-1">
+                            <div className={`glass rounded-2xl rounded-bl-sm px-4 py-3 ${
+                              msg.isError ? 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800' : ''
+                            }`}>
+                              <p className="text-sm text-gray-900 dark:text-gray-100 whitespace-pre-wrap">
+                                {msg.response}
+                              </p>
+                            </div>
+                            <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                              {formatTime(msg.timestamp)}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))}
+                
+                {/* Indicador de Escritura */}
+                {isTyping && (
+                  <div className="flex justify-start">
+                    <div className="flex items-start space-x-3 max-w-xs lg:max-w-md">
+                      <div className="w-8 h-8 bg-gradient-to-br from-green-500 to-emerald-500 rounded-full flex items-center justify-center text-white text-sm font-bold">
+                        🤖
+                      </div>
+                      <div className="glass rounded-2xl rounded-bl-sm px-4 py-3">
+                        <div className="flex space-x-1">
+                          <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
+                          <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+                          <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+            <div ref={messagesEndRef} />
           </div>
-        </div>
 
-        {/* Messages */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-4">
-          {messages.length === 0 ? (
-            <div className="text-center py-8">
-              <div className="text-6xl mb-4">🤖</div>
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-                ¡Hola! Soy tu asistente fitness
-              </h3>
-              <p className="text-gray-500 dark:text-gray-400 mb-4">
-                Estoy aquí para ayudarte con consejos de entrenamiento, nutrición y motivación.
-              </p>
-              <p className="text-sm text-gray-400 dark:text-gray-500">
-                Puedes preguntarme cualquier cosa relacionada con fitness y salud.
-              </p>
-            </div>
-          ) : (
-            messages.map((message, index) => (
-              <div key={index} className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}>
-                <div className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
-                  message.type === 'user' 
-                    ? 'bg-blue-500 text-white' 
-                    : 'bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200'
-                }`}>
-                  <p className="text-sm">{message.content}</p>
-                  <p className={`text-xs mt-1 ${
-                    message.type === 'user' 
-                      ? 'text-blue-100' 
-                      : 'text-gray-500 dark:text-gray-400'
-                  }`}>
-                    {new Date(message.timestamp).toLocaleTimeString('es-ES', {
-                      hour: '2-digit',
-                      minute: '2-digit'
-                    })}
-                  </p>
-                </div>
-              </div>
-            ))
-          )}
-          
-          {loading && (
-            <div className="flex justify-start">
-              <div className="bg-gray-200 dark:bg-gray-700 rounded-lg px-4 py-2">
-                <div className="flex items-center space-x-2">
-                  <div className="w-2 h-2 bg-gray-500 rounded-full animate-pulse"></div>
-                  <div className="w-2 h-2 bg-gray-500 rounded-full animate-pulse" style={{ animationDelay: '0.1s' }}></div>
-                  <div className="w-2 h-2 bg-gray-500 rounded-full animate-pulse" style={{ animationDelay: '0.2s' }}></div>
-                  <span className="text-sm text-gray-500 dark:text-gray-400">Escribiendo...</span>
-                </div>
-              </div>
-            </div>
-          )}
-          
-          <div ref={messagesEndRef} />
-        </div>
-
-        {/* Message Input */}
-        <div className="border-t border-gray-200 dark:border-gray-700 p-4">
-          <form onSubmit={sendMessage} className="flex items-center space-x-2">
+          {/* Formulario de Entrada */}
+          <form onSubmit={sendMessage} className="flex space-x-3">
             <input
               type="text"
-              value={newMessage}
-              onChange={(e) => setNewMessage(e.target.value)}
-              placeholder="Escribe tu pregunta aquí..."
-              className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+              value={currentMessage}
+              onChange={(e) => setCurrentMessage(e.target.value)}
+              placeholder="Escribe tu pregunta sobre fitness, nutrición o bienestar..."
+              className="flex-1 px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
               disabled={loading}
             />
             <button
               type="submit"
-              disabled={loading || !newMessage.trim()}
-              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={loading || !currentMessage.trim()}
+              className="bg-gradient-to-r from-blue-500 to-purple-500 text-white px-6 py-3 rounded-xl font-medium hover:shadow-lg hover:shadow-blue-500/25 transition-all duration-300 disabled:opacity-50"
             >
-              {loading ? '📤' : '➤'}
+              {loading ? (
+                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+              ) : (
+                <span>Enviar</span>
+              )}
             </button>
           </form>
         </div>
-      </div>
 
-      {/* Quick Questions */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-          Preguntas Frecuentes
-        </h3>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          {quickQuestions.map((question, index) => (
-            <button
-              key={index}
-              onClick={() => handleQuickQuestion(question)}
-              className="text-left p-3 bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 rounded-lg transition-colors text-sm text-gray-700 dark:text-gray-300"
-            >
-              💬 {question}
-            </button>
-          ))}
-        </div>
-      </div>
+        {/* Panel Lateral */}
+        <div className="lg:w-80 space-y-6">
+          {/* Preguntas Sugeridas */}
+          <div className="glass rounded-2xl p-6 animate-slide-up" style={{ animationDelay: '0.2s' }}>
+            <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4">
+              Preguntas Sugeridas
+            </h3>
+            <div className="space-y-3">
+              {suggestedQuestions.map((question, index) => (
+                <button
+                  key={index}
+                  onClick={() => quickReply(question)}
+                  className="w-full text-left bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-700 hover:from-blue-50 hover:to-purple-50 dark:hover:from-blue-900/20 dark:hover:to-purple-900/20 rounded-xl p-3 transition-all duration-300 hover:shadow-md"
+                >
+                  <p className="text-sm text-gray-700 dark:text-gray-300">
+                    {question}
+                  </p>
+                </button>
+              ))}
+            </div>
+          </div>
 
-      {/* AI Features */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-          Funcionalidades del Asistente IA
-        </h3>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg">
-            <div className="text-2xl mb-2">🎯</div>
-            <h4 className="font-semibold text-blue-900 dark:text-blue-300 mb-2">
-              Consejos Personalizados
-            </h4>
-            <p className="text-sm text-blue-800 dark:text-blue-400">
-              Recibe consejos adaptados a tu perfil, objetivos y progreso actual.
-            </p>
+          {/* Consejos de Uso */}
+          <div className="glass rounded-2xl p-6 animate-slide-up" style={{ animationDelay: '0.3s' }}>
+            <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4">
+              Consejos de Uso
+            </h3>
+            <div className="space-y-3">
+              <div className="flex items-start space-x-3">
+                <div className="w-6 h-6 bg-blue-100 dark:bg-blue-900/20 rounded-full flex items-center justify-center flex-shrink-0">
+                  <span className="text-blue-600 dark:text-blue-400 text-sm">💡</span>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-700 dark:text-gray-300">
+                    Sé específico en tus preguntas para obtener respuestas más personalizadas
+                  </p>
+                </div>
+              </div>
+              
+              <div className="flex items-start space-x-3">
+                <div className="w-6 h-6 bg-green-100 dark:bg-green-900/20 rounded-full flex items-center justify-center flex-shrink-0">
+                  <span className="text-green-600 dark:text-green-400 text-sm">🎯</span>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-700 dark:text-gray-300">
+                    Pregunta sobre tu rutina actual, objetivos y preferencias
+                  </p>
+                </div>
+              </div>
+              
+              <div className="flex items-start space-x-3">
+                <div className="w-6 h-6 bg-purple-100 dark:bg-purple-900/20 rounded-full flex items-center justify-center flex-shrink-0">
+                  <span className="text-purple-600 dark:text-purple-400 text-sm">🔄</span>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-700 dark:text-gray-300">
+                    Puedes hacer preguntas de seguimiento para aclarar dudas
+                  </p>
+                </div>
+              </div>
+              
+              <div className="flex items-start space-x-3">
+                <div className="w-6 h-6 bg-orange-100 dark:bg-orange-900/20 rounded-full flex items-center justify-center flex-shrink-0">
+                  <span className="text-orange-600 dark:text-orange-400 text-sm">⚠️</span>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-700 dark:text-gray-300">
+                    Recuerda que soy un asistente de IA, no reemplazo el consejo médico profesional
+                  </p>
+                </div>
+              </div>
+            </div>
           </div>
-          
-          <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg">
-            <div className="text-2xl mb-2">🥗</div>
-            <h4 className="font-semibold text-green-900 dark:text-green-300 mb-2">
-              Guía Nutricional
-            </h4>
-            <p className="text-sm text-green-800 dark:text-green-400">
-              Obtén recomendaciones sobre alimentación, recetas y planificación de comidas.
-            </p>
-          </div>
-          
-          <div className="bg-purple-50 dark:bg-purple-900/20 p-4 rounded-lg">
-            <div className="text-2xl mb-2">💪</div>
-            <h4 className="font-semibold text-purple-900 dark:text-purple-300 mb-2">
-              Entrenamiento Adaptado
-            </h4>
-            <p className="text-sm text-purple-800 dark:text-purple-400">
-              Recibe rutinas y ejercicios personalizados según tu nivel y equipamiento.
-            </p>
-          </div>
-          
-          <div className="bg-yellow-50 dark:bg-yellow-900/20 p-4 rounded-lg">
-            <div className="text-2xl mb-2">🔥</div>
-            <h4 className="font-semibold text-yellow-900 dark:text-yellow-300 mb-2">
-              Motivación Constante
-            </h4>
-            <p className="text-sm text-yellow-800 dark:text-yellow-400">
-              Mantente motivado con mensajes personalizados y estrategias de adherencia.
-            </p>
-          </div>
-          
-          <div className="bg-red-50 dark:bg-red-900/20 p-4 rounded-lg">
-            <div className="text-2xl mb-2">📊</div>
-            <h4 className="font-semibold text-red-900 dark:text-red-300 mb-2">
-              Análisis de Progreso
-            </h4>
-            <p className="text-sm text-red-800 dark:text-red-400">
-              Interpreta tus datos de progreso y sugiere ajustes en tu plan.
-            </p>
-          </div>
-          
-          <div className="bg-indigo-50 dark:bg-indigo-900/20 p-4 rounded-lg">
-            <div className="text-2xl mb-2">🏥</div>
-            <h4 className="font-semibold text-indigo-900 dark:text-indigo-300 mb-2">
-              Bienestar Integral
-            </h4>
-            <p className="text-sm text-indigo-800 dark:text-indigo-400">
-              Consejos sobre descanso, hidratación y manejo del estrés.
-            </p>
-          </div>
-        </div>
-      </div>
 
-      {/* Usage Tips */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-          Consejos de Uso
-        </h3>
-        
-        <div className="space-y-3">
-          <div className="flex items-start space-x-3">
-            <div className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
-              <span className="text-white text-xs font-bold">1</span>
-            </div>
-            <div>
-              <h4 className="font-medium text-gray-900 dark:text-white">
-                Sé específico en tus preguntas
-              </h4>
-              <p className="text-sm text-gray-600 dark:text-gray-400">
-                Cuanto más detalles proporciones, mejor podrá ayudarte el asistente.
-              </p>
-            </div>
-          </div>
-          
-          <div className="flex items-start space-x-3">
-            <div className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
-              <span className="text-white text-xs font-bold">2</span>
-            </div>
-            <div>
-              <h4 className="font-medium text-gray-900 dark:text-white">
-                Menciona tu contexto
-              </h4>
-              <p className="text-sm text-gray-600 dark:text-gray-400">
-                Incluye información sobre tu nivel, objetivos y limitaciones.
-              </p>
-            </div>
-          </div>
-          
-          <div className="flex items-start space-x-3">
-            <div className="w-6 h-6 bg-purple-500 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
-              <span className="text-white text-xs font-bold">3</span>
-            </div>
-            <div>
-              <h4 className="font-medium text-gray-900 dark:text-white">
-                Haz seguimiento
-              </h4>
-              <p className="text-sm text-gray-600 dark:text-gray-400">
-                Puedes hacer preguntas de seguimiento para profundizar en un tema.
-              </p>
+          {/* Estadísticas */}
+          <div className="glass rounded-2xl p-6 animate-slide-up" style={{ animationDelay: '0.4s' }}>
+            <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4">
+              Estadísticas
+            </h3>
+            <div className="space-y-4">
+              <div className="flex justify-between items-center">
+                <span className="text-gray-600 dark:text-gray-400">Mensajes enviados:</span>
+                <span className="font-semibold text-blue-600 dark:text-blue-400">
+                  {messages.filter(m => m.isUser).length}
+                </span>
+              </div>
+              
+              <div className="flex justify-between items-center">
+                <span className="text-gray-600 dark:text-gray-400">Respuestas recibidas:</span>
+                <span className="font-semibold text-green-600 dark:text-green-400">
+                  {messages.filter(m => !m.isUser).length}
+                </span>
+              </div>
+              
+              <div className="flex justify-between items-center">
+                <span className="text-gray-600 dark:text-gray-400">Estado del chat:</span>
+                <span className="font-semibold text-green-600 dark:text-green-400">
+                  Activo
+                </span>
+              </div>
             </div>
           </div>
         </div>
